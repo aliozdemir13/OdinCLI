@@ -46,20 +46,22 @@ func main() {
 			emailAddress := strings.TrimSpace(os.Getenv("EMAIL_ADDRESS"))
 			instanceOne := strings.TrimSpace(os.Getenv("INSTANCE_URL_ONE"))
 			instanceTwo := strings.TrimSpace(os.Getenv("INSTANCE_URL_TWO"))
+			projectKeyOne := strings.TrimSpace(os.Getenv("PROJECT_KEY_ONE"))
+			projectKeyTwo := strings.TrimSpace(os.Getenv("PROJECT_KEY_TWO"))
 
 			// SET INSTANCE CONFIG HERE
 			// TODO create a config file
 			switch projectKey {
-			case "ONE":
+			case projectKeyOne:
 				internal.CurrentInstance = internal.JiraInstance{
-					Name:    "ONE",
+					Name:    projectKeyOne,
 					BaseURL: instanceOne,
 					Email:   emailAddress,
 					Token:   apiKey,
 				}
-			case "TWO":
+			case projectKeyTwo:
 				internal.CurrentInstance = internal.JiraInstance{
-					Name:    "TWO",
+					Name:    projectKeyTwo,
 					BaseURL: instanceTwo,
 					Email:   emailAddress,
 					Token:   apiKey,
@@ -126,15 +128,28 @@ func main() {
 
 		case "filter":
 			if len(parts) < 2 {
-				fmt.Println("Usage: filter ---In Progress")
+				fmt.Println("Usage: filter ---status In Progress")
+				fmt.Println("Usage: filter ---prio High")
 				continue
 			}
-			status := strings.ToLower(strings.Trim(parts[1], "\""))
-			fmt.Printf(internal.StyleDim(internal.StyleYellow("Filtering local results for status: %s\n")), status)
+			params := strings.SplitN(parts[1], " ", 2)
+			if len(params) < 2 {
+				fmt.Println("Usage: filter ---status In Progress")
+				fmt.Println("Usage: filter ---prio High")
+				continue
+			}
+
+			searchKey := strings.ToLower(strings.Trim(params[1], "\""))
+			field := strings.ToLower(strings.Trim(params[0], "\""))
+			fmt.Printf(internal.StyleDim(internal.StyleYellow("Filtering local results for %s: %s\n")), field, searchKey)
 
 			found := false
 			for _, e := range internal.LastEntries {
-				if strings.ToLower(e.Fields.Status.StatusCategory.Name) == status {
+				if field == "status" && strings.ToLower(e.Fields.Status.StatusCategory.Name) == searchKey {
+					fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.StatusCategory.Name), internal.StyleDim(e.Fields.Assignee.Name))
+					fmt.Println(strings.Repeat("-", 40))
+					found = true
+				} else if field == "prio" && strings.ToLower(e.Fields.Priority.Name) == searchKey {
 					fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.StatusCategory.Name), internal.StyleDim(e.Fields.Assignee.Name))
 					fmt.Println(strings.Repeat("-", 40))
 					found = true
@@ -192,14 +207,7 @@ func main() {
 			fmt.Println(internal.StyleBlue(internal.StyleBold("Goodbye!")))
 			return
 		case "help":
-			fmt.Println(internal.StyleDim("\nUsage: pull ---{{ProjectKey}}"))
-			fmt.Println(internal.StyleDim("Usage: details ---{{IssueKey}}"))
-			fmt.Println(internal.StyleDim("Usage: search ---{{IssueKey}}"))
-			fmt.Println(internal.StyleDim("Usage: filter ---{{Status}}"))
-			fmt.Println(internal.StyleDim("Usage: addComment ---{{IssueKey}} text for the comment"))
-			fmt.Println(internal.StyleDim("Usage: myIssues"))
-			fmt.Println(internal.StyleDim("Usage: exit"))
-			fmt.Println(internal.StyleDim("Usage: help"))
+			internal.PrintCommandList()
 
 		default:
 			fmt.Println(internal.StyleRed("Unknown command. See menu above."))
