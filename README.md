@@ -10,15 +10,6 @@ Security-focused design - none of the pulled information stored in the device bu
 
 Pull command defines the context(project), and for context change a new pull with the desired project key must be done. For refreshing the context, pull with same project key must be done.
 
-.env requires:
-`
-API_KEY={{generatedToken}}
-EMAIL_ADDRESS={{usernameCreatedTheToken}}
-INSTANCE_URL_ONE={{jiraInsatnce1}}
-INSTANCE_URL_TWO={{jiraInsatnce2}}
-`
-!!! Without .env, code will not run.
-
 Command	Action:
 - pull {{KEY}}	Fetches open tickets for a specific project (e.g., pull ABC).
 - details {{KEY}}	Displays description, status, priority, and recent comments.
