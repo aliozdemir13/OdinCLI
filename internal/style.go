@@ -23,10 +23,15 @@ func PrintHeader() {
   ╚═════╝  ╚═════╝  ╚═╝ ╚═╝  ╚═══╝`
 	fmt.Println(Cyan + logo + Reset)
 
+	PrintCommandList()
+}
+
+func PrintCommandList() {
 	fmt.Println(StyleDim("\nUsage: pull ---{{ProjectKey}}"))
 	fmt.Println(StyleDim("Usage: details ---{{IssueKey}}"))
 	fmt.Println(StyleDim("Usage: search ---{{IssueKey}}"))
-	fmt.Println(StyleDim("Usage: filter ---{{Status}}"))
+	fmt.Println(StyleDim("Usage: filter ---status {{Status}}"))
+	fmt.Println(StyleDim("Usage: filter ---prio {{Priority}}"))
 	fmt.Println(StyleDim("Usage: addComment ---{{IssueKey}} text for the comment"))
 	fmt.Println(StyleDim("Usage: myIssues"))
 	fmt.Println(StyleDim("Usage: exit"))

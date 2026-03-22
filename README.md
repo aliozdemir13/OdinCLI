@@ -11,14 +11,15 @@ Security-focused design - none of the pulled information stored in the device bu
 Pull command defines the context(project), and for context change a new pull with the desired project key must be done. For refreshing the context, pull with same project key must be done.
 
 Command	Action:
-- pull {{KEY}}	Fetches open tickets for a specific project (e.g., pull ABC).
-- details {{KEY}}	Displays description, status, priority, and recent comments.
-- addComment {{KEY}}	Prompts to add a new comment to a specific issue.
-- filter {{STATUS}}	Filters the current local list by status (e.g., filter "In Progress").
-- search {{KEY}}	Performs a deep search for a specific ticket key.
-- myIssues	Quick-filter to show only issues assigned to you.
-- help	Lists all commands.
-- exit	Safely closes the application and clears the session.
+- pull ---{{KEY}} -> Fetches open tickets for a specific project (e.g., pull ABC).
+- details ---{{KEY}} -> Displays description, status, priority, and recent comments.
+- addComment ---{{KEY}}	comment to add -> Prompts to add a new comment to a specific issue.
+- filter ---status {{STATUS}}	Filters the current local list by status (e.g., filter ---status In Progress).
+- filter ---prio {{PRIORITY}}	Filters the current local list by priority (e.g., filter ---prio High).
+- search {{KEY}} -> Performs a deep search for a specific ticket key.
+- myIssues -> Quick-filter to show only issues assigned to you.
+- help -> Lists all commands.
+- exit -> Safely closes the application and clears the session.
 
 ## Setup & Installation
 
@@ -39,12 +40,12 @@ go build -o odin
 ```
 
 ### TODO
-[] Extending filter to allow also use priority
-[] Adding change status command
-[] Adding assign command both for current user and other potential users
-[] Adding logTime command
-[] Adding create command
-[] Adding changeEstimation command
+- [X] Extending filter to allow also use priority
+- [ ] Adding change status command
+- [ ] Adding assign command both for current user and other potential users
+- [ ] Adding logTime command
+- [ ] Adding create command
+- [ ] Adding changeEstimation command
 
 ## Contributing
 This is an open-source project! If you have ideas for new enterprise integrations (Slack, GitHub, ADO), feel free to open an issue or a PR.
