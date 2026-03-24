@@ -41,11 +41,13 @@ go build -o odin
 
 ### TODO
 - [X] Extending filter to allow also use priority
-- [ ] Adding change status command
+- [X] Pull complete list of open issues with pagination
+- [X] Adding change status command
 - [ ] Adding assign command both for current user and other potential users
 - [ ] Adding logTime command
 - [ ] Adding create command
 - [ ] Adding changeEstimation command
+- [ ] Adding search epics and display all the child issues under it
 
 ## Contributing
 This is an open-source project! If you have ideas for new enterprise integrations (Slack, GitHub, ADO), feel free to open an issue or a PR.

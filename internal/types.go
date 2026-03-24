@@ -17,10 +17,12 @@ type JiraInstance struct {
 
 // JiraResponse is the structure of the data Jira returns
 type JiraResponse struct {
-	StartAt    int      `json:"startAt"`
-	MaxResults int      `json:"maxResults"`
-	Total      int      `json:"total"`
-	Issues     []Issues `json:"issues"`
+	StartAt       int      `json:"startAt"`
+	MaxResults    int      `json:"maxResults"`
+	Total         int      `json:"total"`
+	Issues        []Issues `json:"issues"`
+	NextPageToken string   `json:"nextPageToken"`
+	IsLast        bool     `json:"isLast"`
 }
 
 type Issues struct {
@@ -74,4 +76,20 @@ type JiraCommentResponse struct {
 		Body    JiraDescription `json:"body"`
 	} `json:"comments"`
 	Total int `json:"total"`
+}
+
+type JiraTransitionsResponse struct {
+	Transitions []Transition `json:"transitions"`
+}
+
+type Transition struct {
+	Id   string `json:"id"`
+	Name string `json:"name"` // e.g., "In Progress"
+	To   struct {
+		Name string `json:"name"`
+	} `json:"to"`
+}
+
+type AddCommentRequest struct {
+	Body JiraDescription `json:"body"`
 }
