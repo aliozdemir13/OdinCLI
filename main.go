@@ -203,6 +203,51 @@ func main() {
 			if !found {
 				fmt.Println(internal.StyleRed("Issue not found in last pull."))
 			}
+		case "status":
+			if len(parts) < 2 {
+				fmt.Println(internal.StyleRed("Usage: status {{KEY}}"))
+				continue
+			}
+			issueKey := strings.ToUpper(parts[1])
+
+			// Fetch potential values
+			fmt.Println(internal.StyleDim("Fetching valid transitions for " + issueKey + "..."))
+			transitions, err := internal.GetAvailableTransitions(issueKey)
+			if err != nil || len(transitions) == 0 {
+				fmt.Println(internal.StyleRed("Could not fetch transitions or no moves available."))
+				continue
+			}
+
+			// Display the "Menu"
+			fmt.Println(internal.StyleBold("\nSelect new status:"))
+			for i, t := range transitions {
+				fmt.Printf("%d) %s\n", i+1, internal.StyleYellow(t.Name))
+			}
+			fmt.Print(internal.StyleCyan("Choose option (or 'c' to cancel): "))
+
+			// Get user selection
+			var choice string
+			fmt.Scanln(&choice)
+
+			if choice == "c" {
+				continue
+			}
+
+			// Convert string choice to index
+			idx := 0
+			fmt.Sscanf(choice, "%d", &idx)
+			if idx < 1 || idx > len(transitions) {
+				fmt.Println(internal.StyleRed("Invalid selection."))
+				continue
+			}
+
+			selected := transitions[idx-1]
+			err = internal.PerformTransition(issueKey, selected.Id)
+			if err != nil {
+				fmt.Println(internal.StyleRed("Update failed: ") + err.Error())
+			} else {
+				fmt.Println(internal.StyleGreen("✔ Status changed to " + selected.Name))
+			}
 		case "exit":
 			fmt.Println(internal.StyleBlue(internal.StyleBold("Goodbye!")))
 			return
