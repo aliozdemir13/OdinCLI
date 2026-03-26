@@ -19,6 +19,7 @@ Command	Action:
 - status ---{{KEY}}	Filters the current local list by priority (e.g., filter ---prio High).
 - search ---{{KEY}} -> Performs a deep search for a specific ticket key.
 - myIssues -> Quick-filter to show only issues assigned to you.
+- assign ---{{KEY}} -> change assignment of the issue.
 - help -> Lists all commands.
 - exit -> Safely closes the application and clears the session.
 
@@ -29,10 +30,17 @@ Command	Action:
 3. **Configure Environment**: Create a `.env` file in the root directory:
    ```env
    JIRA_TOKEN=your_generated_api_token
-   JIRA_EMAIL=your_email@company.com
-   INSTANCE_URL=https://your-domain.atlassian.net
    ```
    Odin supports multiple instances connected to the same account.
+4. **Config JSON**: Create a `config.json` file in the root directory:
+    ```config
+    {
+        "projects": {
+            "projectName1": { "url": "https://projectOne.atlassian.net", "email": "xxx@yyy.com" },
+            "projectName2": { "url": "https://projectTwo.atlassian.net", "email": "xxx@yyy.com" }
+        }
+    }
+    ```
 
 ## Build & Run
 ```
@@ -44,12 +52,14 @@ go build -o odin
 - [X] Extending filter to allow also use priority
 - [X] Pull complete list of open issues with pagination
 - [X] Adding change status command
-- [ ] Adding assign command both for current user and other potential users
+- [X] Adding assign command both for current user and other potential users
 - [ ] Adding logTime command
 - [ ] Adding create command
 - [ ] Adding changeEstimation command
 - [ ] Adding search epics and display all the child issues under it
 - [ ] Extend filter to see current sprint and backlog
+- [ ] Adding ability of mentioning people in comments
+- [ ] Update search command for text search
 
 ## Contributing
 This is an open-source project! If you have ideas for new enterprise integrations (Slack, GitHub, ADO), feel free to open an issue or a PR.
