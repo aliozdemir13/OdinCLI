@@ -16,7 +16,8 @@ Command	Action:
 - addComment ---{{KEY}}	comment to add -> Prompts to add a new comment to a specific issue.
 - filter ---status {{STATUS}}	Filters the current local list by status (e.g., filter ---status In Progress).
 - filter ---prio {{PRIORITY}}	Filters the current local list by priority (e.g., filter ---prio High).
-- search {{KEY}} -> Performs a deep search for a specific ticket key.
+- status ---{{KEY}}	Filters the current local list by priority (e.g., filter ---prio High).
+- search ---{{KEY}} -> Performs a deep search for a specific ticket key.
 - myIssues -> Quick-filter to show only issues assigned to you.
 - help -> Lists all commands.
 - exit -> Safely closes the application and clears the session.
@@ -48,6 +49,7 @@ go build -o odin
 - [ ] Adding create command
 - [ ] Adding changeEstimation command
 - [ ] Adding search epics and display all the child issues under it
+- [ ] Extend filter to see current sprint and backlog
 
 ## Contributing
 This is an open-source project! If you have ideas for new enterprise integrations (Slack, GitHub, ADO), feel free to open an issue or a PR.

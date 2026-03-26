@@ -1,24 +1,28 @@
 package internal
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
 var (
 	CurrentInstance JiraInstance
 	LastEntries     []Issues
+	EntriesCache    map[string]Issues
 )
 
 func prepareQueryCallout(endpoint string, nextPageToken string, jql string) *http.Request {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		fmt.Printf("Error parsing url: %s", err)
+		return nil
 	}
 
 	q := u.Query()
@@ -34,6 +38,7 @@ func prepareQueryCallout(endpoint string, nextPageToken string, jql string) *htt
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		fmt.Printf("Error parsing request: %s", err)
+		return nil
 	}
 	req.SetBasicAuth(CurrentInstance.Email, CurrentInstance.Token)
 	req.Header.Set("Accept", "application/json")
@@ -54,6 +59,7 @@ func FetchIssues(jql string) {
 	// print out the total issues fetched
 	issueCount := 0
 	LastEntries = []Issues{}
+	EntriesCache = make(map[string]Issues)
 
 	for !isLast {
 		apiPath := "/rest/api/3/search/jql"
@@ -72,6 +78,7 @@ func FetchIssues(jql string) {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Printf("Error reading response: %s", err)
+			return
 		}
 		if resp.StatusCode != http.StatusOK {
 			fmt.Printf(StyleRed("Jira API Error (%d): %s\n"), resp.StatusCode, string(body))
@@ -92,6 +99,7 @@ func FetchIssues(jql string) {
 
 		for _, issue := range apiData.Issues {
 			LastEntries = append(LastEntries, issue)
+			EntriesCache[issue.Key] = issue
 			fmt.Printf("%s - [%s] %s | %s (%s)\n",
 				//StyleDim(issue.Fields.IssueType.Name),
 				GetPriorityIcon(issue.Fields.Priority.Name),
@@ -317,4 +325,113 @@ func PerformTransition(issueKey string, transitionId string) error {
 		return fmt.Errorf("Jira returned status %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// SearchUsers finds potential assignees based on a search string
+func SearchUsers(query string) ([]JiraUser, error) {
+	apiPath := "/rest/api/3/user/search"
+	baseUrl := strings.TrimSuffix(CurrentInstance.BaseURL, "/")
+
+	u, _ := url.Parse(baseUrl + apiPath)
+	q := u.Query()
+	q.Set("query", query)
+	// We only want active users who can be assigned to issues
+	q.Set("maxResults", "5")
+	u.RawQuery = q.Encode()
+
+	req, _ := http.NewRequest("GET", u.String(), nil)
+	req.SetBasicAuth(CurrentInstance.Email, CurrentInstance.Token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var users []JiraUser
+	body, _ := io.ReadAll(resp.Body)
+	if err := json.Unmarshal(body, &users); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func AssignInteractive(issueKey string) {
+	fmt.Print(StyleBold("Search user to assign: "))
+
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		return
+	}
+	input := scanner.Text()
+
+	if input == "" {
+		return
+	}
+
+	users, err := SearchUsers(input)
+	if err != nil || len(users) == 0 {
+		fmt.Println(StyleRed("No users found matching: " + input))
+		return
+	}
+
+	bestMatch := users[0]
+
+	displayName := bestMatch.DisplayName
+	var recommendation string
+	if strings.HasPrefix(strings.ToLower(displayName), strings.ToLower(input)) {
+		typedPart := displayName[:len(input)]
+		remainingPart := displayName[len(input):]
+		recommendation = typedPart + StyleDim(remainingPart)
+	} else {
+		recommendation = StyleYellow(displayName)
+	}
+
+	fmt.Printf("Match found: %s\n", recommendation)
+	fmt.Printf("Assign %s to this user? (y/n): ", StyleGreen(issueKey))
+
+	var confirm string
+	fmt.Scanln(&confirm)
+
+	if strings.ToLower(confirm) == "y" {
+		AssignIssue(issueKey, bestMatch.AccountId)
+	} else if len(users) > 1 {
+		fmt.Println(StyleBold("\nOther matches:"))
+		for i, u := range users {
+			fmt.Printf("%d) %s\n", i+1, u.DisplayName)
+		}
+		fmt.Print("Select number (or 'c' to cancel): ")
+		var choice int
+		fmt.Scanln(&choice)
+		if choice > 0 && choice <= len(users) {
+			AssignIssue(issueKey, users[choice-1].AccountId)
+		}
+	}
+}
+
+func AssignIssue(issueKey string, accountId string) {
+	apiPath := fmt.Sprintf("/rest/api/3/issue/%s/assignee", issueKey)
+	baseUrl := strings.TrimSuffix(CurrentInstance.BaseURL, "/")
+
+	payload := AssigneePayload{AccountId: accountId}
+	jsonBody, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("PUT", baseUrl+apiPath, bytes.NewBuffer(jsonBody))
+	req.SetBasicAuth(CurrentInstance.Email, CurrentInstance.Token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf(StyleRed("Network Error: %v\n"), err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNoContent {
+		fmt.Printf(StyleGreen("✔ %s assigned successfully.\n"), issueKey)
+	} else {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf(StyleRed("Failed to assign (%d): %s\n"), resp.StatusCode, string(body))
+	}
 }

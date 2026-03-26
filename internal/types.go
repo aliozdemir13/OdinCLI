@@ -93,3 +93,12 @@ type Transition struct {
 type AddCommentRequest struct {
 	Body JiraDescription `json:"body"`
 }
+
+type AssigneePayload struct {
+	AccountId string `json:"accountId"`
+}
+
+type JiraUser struct {
+	AccountId   string `json:"accountId"`
+	DisplayName string `json:"displayName"`
+}
