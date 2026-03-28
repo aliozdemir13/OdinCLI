@@ -188,7 +188,7 @@ func PerformTransition(issueKey string, transitionId string) error {
 
 func SearchUsers(query string) ([]JiraUser, error) {
 	path := fmt.Sprintf("/rest/api/3/user/search?query=%s&maxResults=5", url.QueryEscape(query))
-	req, _ := newRequest("GET", path, nil)
+	req, _ := newRequest("GET", apiURL(path), nil)
 
 	var users []JiraUser
 	err := performRequest(req, http.StatusOK, &users)
@@ -197,7 +197,7 @@ func SearchUsers(query string) ([]JiraUser, error) {
 
 func AssignIssue(issueKey string, accountId string) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/assignee", issueKey)
-	req, _ := newRequest("PUT", path, AssigneePayload{AccountId: accountId})
+	req, _ := newRequest("PUT", apiURL(path), AssigneePayload{AccountId: accountId})
 
 	if err := performRequest(req, http.StatusNoContent, nil); err != nil {
 		fmt.Println(err)
