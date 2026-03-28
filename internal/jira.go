@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 var (
@@ -70,6 +72,11 @@ func FetchIssues(jql string) {
 		return
 	}
 
+	// 1. Initialize the Table
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"PRIORITY", "TYPE", "KEY", "SUMMARY", "STATUS", "ASSIGNEE"})
+
 	nextPageToken := ""
 	isLast := false
 	issueCount := 0
@@ -77,11 +84,11 @@ func FetchIssues(jql string) {
 	EntriesCache = make(map[string]Issues)
 
 	for !isLast {
-		// Build the search path with query params
 		endpoint := apiURL("/rest/api/3/search/jql")
 		u, err := url.Parse(endpoint)
 		if err != nil {
 			fmt.Printf("Error parsing url: %s", err)
+			return
 		}
 
 		q := u.Query()
@@ -90,7 +97,6 @@ func FetchIssues(jql string) {
 		if nextPageToken != "" {
 			q.Set("nextPageToken", nextPageToken)
 		}
-
 		q.Set("fields", "summary,description,issuetype,priority,status,assignee,duedate,created")
 		u.RawQuery = q.Encode()
 
@@ -110,18 +116,59 @@ func FetchIssues(jql string) {
 		for _, issue := range apiData.Issues {
 			LastEntries = append(LastEntries, issue)
 			EntriesCache[issue.Key] = issue
-			fmt.Printf("%s - [%s] %s | %s (%s)\n",
-				GetPriorityIcon(issue.Fields.Priority.Name),
-				StyleGreen(issue.Key),
-				StyleBold(issue.Fields.Summary),
-				StyleYellow(issue.Fields.Status.Name),
-				StyleDim(issue.Fields.Assignee.Name))
+
+			// Prepare Styling
+			prioIcon := GetPriorityIcon(issue.Fields.Priority.Name)
+			issueType := issue.Fields.IssueType.Name
+			issueKey := StyleGreen(issue.Key)
+			issueSummary := issue.Fields.Summary
+			issueStatus := StyleYellow(issue.Fields.Status.Name)
+
+			assignee := issue.Fields.Assignee.Name
+			if assignee == "" {
+				assignee = "Unassigned"
+			}
+			assignee = StyleDim(assignee)
+
+			// Apply Epic styling logic
+			if issueType == "Epic" {
+				issueKey = StyleIndigo(issue.Key)
+				issueSummary = StyleIndigo(StyleBold(issueSummary))
+			}
+
+			// 2. Append Row to Table
+			t.AppendRow(table.Row{
+				prioIcon,
+				issueType,
+				issueKey,
+				issueSummary,
+				issueStatus,
+				assignee,
+			})
+
 			issueCount++
 		}
 		isLast = apiData.IsLast
 		nextPageToken = apiData.NextPageToken
 	}
-	fmt.Printf(StyleGreen("Successfully pulled %d issues.\n"), issueCount)
+
+	// 3. Configure Table Style
+	style := table.StyleLight
+	style.Options.DrawBorder = false
+	style.Options.SeparateColumns = false
+	style.Options.SeparateHeader = true
+	style.Box.PaddingRight = "  "
+	t.SetStyle(style)
+
+	// 4. Set column limit for Summary so it doesn't break the terminal
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{Name: "SUMMARY", WidthMax: 60},
+	})
+
+	// 5. Render
+	fmt.Println() // Add a little breathing room
+	t.Render()
+	fmt.Printf("\n"+StyleGreen("Successfully pulled %d issues.")+"\n", issueCount)
 }
 
 func FetchComments(issueKey string) {
@@ -204,6 +251,82 @@ func AssignIssue(issueKey string, accountId string) {
 		return
 	}
 	fmt.Printf(StyleGreen("✔ %s assigned successfully.\n"), issueKey)
+}
+
+func FetchEpicChildren(epicKey string) {
+	// JQL to find all items belonging to this Epic
+	jql := fmt.Sprintf("parent = %s", epicKey)
+
+	// We only need a few fields for the table
+	fields := "summary,status,issuetype,priority,assignee"
+	path := fmt.Sprintf("/rest/api/3/search/jql?jql=%s&fields=%s&maxResults=100", url.QueryEscape(jql), url.QueryEscape(fields))
+
+	req, _ := newRequest("GET", apiURL(path), nil)
+	var apiData JiraResponse
+	if err := performRequest(req, http.StatusOK, &apiData); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if len(apiData.Issues) == 0 {
+		fmt.Println(StyleYellow("No child issues found for this epic."))
+		return
+	}
+
+	fmt.Printf(StyleBold("\nIssues in Epic %s (%d items):\n\n"),
+		StyleIndigo("["+epicKey+"] "+EntriesCache[epicKey].Fields.Summary), len(apiData.Issues))
+
+	// 1. Create the Table Writer
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+
+	// 2. Define Headers
+	t.AppendHeader(table.Row{"TYPE", "KEY", "SUMMARY", "PRIORITY", "STATUS", "ASSIGNEE"})
+
+	for _, issue := range apiData.Issues {
+		// Prepare data
+		issueType := issue.Fields.IssueType.Name
+		key := StyleGreen(issue.Key)
+
+		summary := issue.Fields.Summary
+		// The library handles wrapping, but if you want strict truncation:
+		if len(summary) > 40 {
+			summary = summary[:37] + "..."
+		}
+
+		prio := GetPriorityIcon(issue.Fields.Priority.Name)
+		status := StyleYellow(issue.Fields.Status.Name)
+
+		assignee := issue.Fields.Assignee.Name
+		if assignee == "" {
+			assignee = "Unassigned"
+		}
+		assignee = StyleDim(assignee)
+
+		// 3. Add Row
+		t.AppendRow(table.Row{
+			issueType,
+			key,
+			summary,
+			prio,
+			status,
+			assignee,
+		})
+	}
+
+	// 4. Style the table to look like your original request
+	// We use StyleLight but remove the borders for a "clean" look
+	style := table.StyleLight
+	style.Options.DrawBorder = false
+	style.Options.SeparateColumns = false
+	style.Options.SeparateHeader = true
+	style.Box.PaddingLeft = ""
+	style.Box.PaddingRight = "   " // Matches your spacing
+	t.SetStyle(style)
+
+	// 5. Render
+	t.Render()
+	fmt.Println()
 }
 
 func ExtractPlainText(desc JiraDescription) string {
