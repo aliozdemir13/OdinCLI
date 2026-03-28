@@ -13,12 +13,16 @@ Pull command defines the context(project), and for context change a new pull wit
 Command	Action:
 - pull ---{{KEY}} -> Fetches open tickets for a specific project (e.g., pull ABC).
 - details ---{{KEY}} -> Displays description, status, priority, and recent comments.
+- details ---epic {{KEY}} -> Displays issues under the specified epic.
 - addComment ---{{KEY}}	comment to add -> Prompts to add a new comment to a specific issue.
-- filter ---status {{STATUS}}	Filters the current local list by status (e.g., filter ---status In Progress).
-- filter ---prio {{PRIORITY}}	Filters the current local list by priority (e.g., filter ---prio High).
-- status ---{{KEY}}	Filters the current local list by priority (e.g., filter ---prio High).
+- filter ---status {{STATUS}} -> Filters the current local list by status (e.g., filter ---status In Progress).
+- filter ---prio {{PRIORITY}} -> Filters the current local list by priority (e.g., filter ---prio High).
+- filter ---currentSprint (case insensitive) -> Fetches the current sprint tickets and change context as current sprint. Any filter to apply after this, will be done on current sprint tickets.
+- filter ---backlog (case insensitive) -> Fetches the backlog tickets and change context as current sprint. Any filter to apply after this, will be done on backlog tickets.
+- filter ---myIssues (case insensitive) -> Quick-filter to show only issues assigned to you. This filter always work on the current context (sprint, backlog or all issues)
+- filter ---epics (case insensitive) -> Quick-filter to show only the epics. This filter always work on the current context (sprint, backlog or all issues)
+- status ---{{KEY}}	Allo updating status of the issue. Available issues getting displayed as menu options to select for this command.
 - search ---{{KEY}} -> Performs a deep search for a specific ticket key.
-- myIssues -> Quick-filter to show only issues assigned to you.
 - assign ---{{KEY}} -> change assignment of the issue.
 - help -> Lists all commands.
 - exit -> Safely closes the application and clears the session.
@@ -56,8 +60,8 @@ go build -o odin
 - [ ] Adding logTime command
 - [ ] Adding create command
 - [ ] Adding changeEstimation command
-- [ ] Adding search epics and display all the child issues under it
-- [ ] Extend filter to see current sprint and backlog
+- [X] Adding search epics and display all the child issues under it
+- [X] Extend filter to see current sprint and backlog
 - [ ] Adding ability of mentioning people in comments
 - [ ] Update search command for text search
 

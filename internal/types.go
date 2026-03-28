@@ -111,3 +111,9 @@ type ProjectConfig struct {
 type Config struct {
 	Projects map[string]ProjectConfig `json:"projects"`
 }
+
+type Sprint struct {
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	State string `json:"state"` // "active", "closed", "future"
+}

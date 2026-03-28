@@ -10,12 +10,13 @@ import (
 
 	"log_tracker/internal"
 
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/joho/godotenv"
 )
 
 func handlePull(parts []string, config internal.Config, apiKey string) bool {
 	if len(parts) < 2 {
-		fmt.Println(internal.StyleYellow("Usage: pull ---{{ProjectKey}}"))
+		printCommandUsage("pull")
 		return false
 	}
 
@@ -42,7 +43,7 @@ func handlePull(parts []string, config internal.Config, apiKey string) bool {
 
 func handleDetails(parts []string) bool {
 	if len(parts) < 2 {
-		fmt.Println("Usage: details ---{{Key}}")
+		printCommandUsage("details")
 		return false
 	}
 
@@ -76,12 +77,12 @@ func handleDetails(parts []string) bool {
 
 func handleAddComment(parts []string) bool {
 	if len(parts) < 2 {
-		fmt.Println("Usage: addComment {{Key}} \"Your comment\"")
+		printCommandUsage("addComment")
 		return false
 	}
 	params := strings.SplitN(parts[1], " ", 2)
 	if len(params) < 2 {
-		fmt.Println("Usage: addComment {{Key}} \"Your comment\"")
+		printCommandUsage("addComment")
 		return false
 	}
 
@@ -95,37 +96,111 @@ func handleAddComment(parts []string) bool {
 
 func handleFilter(parts []string) bool {
 	if len(parts) < 2 {
-		fmt.Println("Usage: filter ---status In Progress")
-		fmt.Println("Usage: filter ---prio High")
+		printCommandUsage("filter")
 		return false
 	}
 	params := strings.SplitN(parts[1], " ", 2)
-	if len(params) < 2 {
-		fmt.Println("Usage: filter ---status In Progress")
-		fmt.Println("Usage: filter ---prio High")
-		return false
+	field := strings.ToLower(strings.Trim(params[0], "\""))
+
+	// Handle cases that call other functions immediately
+	switch field {
+	case "myissues":
+		return handleMyIssues()
+	case "currentsprint":
+		internal.FetchIssues(fmt.Sprintf("project = %s AND statusCategory != Done AND sprint in openSprints()", internal.CurrentInstance.Name))
+		return true
+	case "backlog":
+		internal.FetchIssues(fmt.Sprintf("project = %s AND statusCategory != Done AND sprint is EMPTY", internal.CurrentInstance.Name))
+		return true
+	case "epics":
+		handleEpicsFilter()
+		return true
 	}
 
+	if len(params) < 2 {
+		printCommandUsage("filter")
+		return false
+	}
 	searchKey := strings.ToLower(strings.Trim(params[1], "\""))
-	field := strings.ToLower(strings.Trim(params[0], "\""))
+
 	fmt.Printf(internal.StyleDim(internal.StyleYellow("Filtering local results for %s: %s\n")), field, searchKey)
 
+	//Initialize Table
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"PRIORITY", "KEY", "SUMMARY", "STATUS", "ASSIGNEE"})
+
+	foundCount := 0
+	for _, e := range internal.LastEntries {
+		match := false
+		if field == "status" && strings.ToLower(e.Fields.Status.Name) == searchKey {
+			match = true
+		} else if field == "prio" && strings.ToLower(e.Fields.Priority.Name) == searchKey {
+			match = true
+		}
+
+		if match {
+			foundCount++
+
+			// Styling logic
+			issueKey := internal.StyleGreen(e.Key)
+			summary := e.Fields.Summary
+			if e.Fields.IssueType.Name == "Epic" {
+				issueKey = internal.StyleIndigo(e.Key)
+				summary = internal.StyleIndigo(internal.StyleBold(summary))
+			}
+
+			assignee := e.Fields.Assignee.Name
+			if assignee == "" {
+				assignee = "Unassigned"
+			}
+
+			t.AppendRow(table.Row{
+				internal.GetPriorityIcon(e.Fields.Priority.Name),
+				issueKey,
+				summary,
+				internal.StyleYellow(e.Fields.Status.Name),
+				internal.StyleDim(assignee),
+			})
+		}
+	}
+
+	// Render Table if results found
+	if foundCount > 0 {
+		style := table.StyleLight
+		style.Options.DrawBorder = false
+		style.Options.SeparateColumns = false
+		style.Options.SeparateHeader = true
+		style.Box.PaddingRight = "  "
+		t.SetStyle(style)
+
+		t.SetColumnConfigs([]table.ColumnConfig{
+			{Name: "SUMMARY", WidthMax: 60},
+		})
+
+		fmt.Println()
+		t.Render()
+		fmt.Printf("\nFound %d matches in local cache.\n", foundCount)
+	} else {
+		fmt.Println(internal.StyleRed("No matching issues found in last pull."))
+	}
+
+	return true
+}
+
+func handleEpicsFilter() bool {
 	found := false
 	for _, e := range internal.LastEntries {
-		if field == "status" && strings.ToLower(e.Fields.Status.StatusCategory.Name) == searchKey {
-			fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.StatusCategory.Name), internal.StyleDim(e.Fields.Assignee.Name))
-			fmt.Println(strings.Repeat("-", 40))
-			found = true
-		} else if field == "prio" && strings.ToLower(e.Fields.Priority.Name) == searchKey {
-			fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.StatusCategory.Name), internal.StyleDim(e.Fields.Assignee.Name))
+		if strings.ToLower(e.Fields.IssueType.Name) == "epic" {
+			fmt.Printf("\n%s - %s %s | %s\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleIndigo("["+e.Key+"]"), internal.StyleIndigo(internal.StyleBold(e.Fields.Summary)), internal.StyleYellow(e.Fields.Status.Name))
 			fmt.Println(strings.Repeat("-", 40))
 			found = true
 		}
 	}
 	if !found {
-		fmt.Println(internal.StyleRed("Issue not found in last pull."))
+		fmt.Println(internal.StyleRed("No Epics found in last pull."))
+		return false
 	}
-
 	return true
 }
 
@@ -133,7 +208,13 @@ func handleMyIssues() bool {
 	found := false
 	for _, e := range internal.LastEntries {
 		if strings.EqualFold(e.Fields.Assignee.EmailAddress, internal.CurrentInstance.Email) {
-			fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.Name), internal.StyleDim(e.Fields.Assignee.Name))
+			issueKey := internal.StyleGreen("[" + e.Key + "]")
+			issueSummary := internal.StyleBold(e.Fields.Summary)
+			if e.Fields.IssueType.Name == "Epic" {
+				issueKey = internal.StyleIndigo("[" + e.Key + "]")
+				issueSummary = internal.StyleIndigo(internal.StyleBold(e.Fields.Summary))
+			}
+			fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), issueKey, issueSummary, internal.StyleYellow(e.Fields.Status.Name), internal.StyleDim(e.Fields.Assignee.Name))
 			fmt.Println(strings.Repeat("-", 40))
 			found = true
 		}
@@ -147,7 +228,7 @@ func handleMyIssues() bool {
 
 func handleStatus(parts []string) bool {
 	if len(parts) < 2 {
-		fmt.Println(internal.StyleRed("Usage: status ---{{KEY}}"))
+		printCommandUsage("status")
 		return false
 	}
 	issueKey := strings.ToUpper(parts[1])
@@ -195,7 +276,7 @@ func handleStatus(parts []string) bool {
 
 func handleAssign(parts []string) bool {
 	if len(parts) < 2 {
-		fmt.Println(internal.StyleYellow("Usage: assign ---{{KEY}}"))
+		printCommandUsage("assign")
 		return false
 	}
 
@@ -209,7 +290,35 @@ func handleAssign(parts []string) bool {
 	return true
 }
 
-// TODO - clean up the main, it is too messy
+func printCommandUsage(name string) {
+	fmt.Println("Usage:")
+	switch name {
+	case "filter":
+		fmt.Println(internal.StyleYellow("  filter ---status In Progress"))
+		fmt.Println(internal.StyleYellow("  filter ---prio High"))
+		fmt.Println(internal.StyleYellow("  filter ---myIssues"))
+		fmt.Println(internal.StyleYellow("  filter ---currentSprint"))
+		fmt.Println(internal.StyleYellow("  filter ---backlog"))
+		fmt.Println(internal.StyleYellow("  filter ---epics"))
+
+	case "pull":
+		fmt.Println(internal.StyleYellow("  pull ---{{ProjectKey}}"))
+
+	case "details":
+		fmt.Println(internal.StyleYellow("  details ---{{Key}}"))
+		fmt.Println(internal.StyleYellow("  details ---epic {{Key}}"))
+
+	case "addComment":
+		fmt.Println(internal.StyleYellow("  addComment {{Key}} \"Your comment\""))
+
+	case "status":
+		fmt.Println(internal.StyleYellow("  status ---{{KEY}}"))
+
+	case "assign":
+		fmt.Println(internal.StyleYellow("  assign ---{{KEY}}"))
+	}
+}
+
 func main() {
 	internal.PrintHeader()
 
@@ -258,8 +367,14 @@ func main() {
 			}
 
 		case "details": // finds a single issue searched and display description, status, subject, assignee and comments of it
-			if !handleDetails(parts) {
+			if strings.HasPrefix(parts[1], "epic ") {
+				epicKey := strings.ToUpper(strings.TrimPrefix(parts[1], "epic "))
+				internal.FetchEpicChildren(epicKey)
 				continue
+			} else {
+				if !handleDetails(parts) {
+					continue
+				}
 			}
 
 		case "addComment": // adding comment to the issue selected
@@ -296,11 +411,6 @@ func main() {
 
 			fmt.Println(internal.StyleDim(internal.StyleYellow("Fetching comments for " + parts[1] + "...")))
 			internal.FetchComments(searchKey)
-
-		case "myIssues": // display issues assigned to the configured user
-			if !handleMyIssues() {
-				continue
-			}
 
 		case "status": // change status of the issue
 			if !handleStatus(parts) {
