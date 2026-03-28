@@ -87,7 +87,7 @@ func handleAddComment(parts []string) bool {
 
 	fmt.Printf(internal.StyleDim("Posting comment to %s...\n"), params[0])
 
-	fmt.Printf(internal.StyleDim("Posting comment to %s...\n"), params[1])
+	fmt.Printf(internal.StyleDim("Posting comment  %s...\n"), params[1])
 	internal.AddCommentToJira(params[0], params[1])
 
 	return true
@@ -133,7 +133,7 @@ func handleMyIssues() bool {
 	found := false
 	for _, e := range internal.LastEntries {
 		if strings.EqualFold(e.Fields.Assignee.EmailAddress, internal.CurrentInstance.Email) {
-			fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.StatusCategory.Name), internal.StyleDim(e.Fields.Assignee.Name))
+			fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.Name), internal.StyleDim(e.Fields.Assignee.Name))
 			fmt.Println(strings.Repeat("-", 40))
 			found = true
 		}
@@ -222,7 +222,9 @@ func main() {
 
 	configRaw, err := os.ReadFile("config.json")
 	if err != nil {
-		panic(fmt.Sprintf("Error reading file: %s", err))
+		fmt.Println(internal.StyleRed("✘ Error: config.json not found."))
+		fmt.Println(internal.StyleDim("Please create a config.json file in the root directory."))
+		return
 	}
 
 	var config internal.Config
@@ -278,7 +280,7 @@ func main() {
 			searchKey := strings.ToLower(strings.Trim(parts[1], "\""))
 
 			if e, ok := internal.EntriesCache[searchKey]; ok {
-				fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.StatusCategory.Name), internal.StyleDim(e.Fields.Assignee.Name))
+				fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.Name), internal.StyleDim(e.Fields.Assignee.Name))
 				fmt.Println(strings.Repeat("-", 40))
 				if e.Fields.ParsedDescription == "" {
 					e.Fields.ParsedDescription = internal.ExtractPlainText(e.Fields.Description)
