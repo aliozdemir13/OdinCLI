@@ -1,6 +1,11 @@
-package internal
+package style
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+)
 
 const (
 	Reset  = "\033[0m"
@@ -66,4 +71,36 @@ func GetPriorityIcon(priority string) string {
 	default:
 		return Dim + "  [-]  " + Reset // Unknown
 	}
+}
+
+func CreateTable(header table.Row, body []table.Row, columnConfig []table.ColumnConfig) {
+	// Create the Table Writer
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+
+	// Define Headers
+	t.AppendHeader(header)
+
+	for _, row := range body {
+		// Add Row
+		t.AppendRow(row)
+	}
+
+	// Style the table to look like your original request
+	// We use StyleLight but remove the borders for a "clean" look
+	style := table.StyleLight
+	style.Options.DrawBorder = false
+	style.Options.SeparateColumns = false
+	style.Options.SeparateHeader = true
+	style.Box.PaddingLeft = ""
+	style.Box.PaddingRight = "   " // Matches your spacing
+	t.SetStyle(style)
+
+	if columnConfig != nil {
+		t.SetColumnConfigs(columnConfig)
+	}
+
+	// Render
+	t.Render()
+	fmt.Println()
 }
