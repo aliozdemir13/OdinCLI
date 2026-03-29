@@ -74,5 +74,14 @@ go build -o odin
 ## Contributing
 This is an open-source project! If you have ideas for new enterprise integrations (Slack, GitHub, ADO), feel free to open an issue or a PR.
 
+## Built With
+OdinCLI wouldn't be possible without these amazing open-source libraries:
+
+*   [Go-Pretty](https://github.com/jedib0t/go-pretty) - For the high-performance tables and text styling.
+*   [GoDotEnv](https://github.com/joho/godotenv) - For seamless environment variable management.
+
 ## License
 MIT License - see LICENSE for details.
+
+## Disclaimer
+OdinCLI is an independent open-source project and is not affiliated with, sponsored by, or endorsed by Atlassian or Jira.
