@@ -1,4 +1,4 @@
-package internal
+package models
 
 type Comment struct {
 	CreatedDate string

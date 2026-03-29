@@ -9,12 +9,15 @@ import (
 	"strings"
 
 	"log_tracker/internal"
+	"log_tracker/internal/helpers"
+	"log_tracker/internal/models"
+	"log_tracker/internal/style"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/joho/godotenv"
 )
 
-func handlePull(parts []string, config internal.Config, apiKey string) bool {
+func handlePull(parts []string, config models.Config, apiKey string) bool {
 	if len(parts) < 2 {
 		printCommandUsage("pull")
 		return false
@@ -24,18 +27,18 @@ func handlePull(parts []string, config internal.Config, apiKey string) bool {
 
 	proj, ok := config.Projects[projectKey]
 	if !ok {
-		fmt.Printf(internal.StyleRed("Project %s not found in config.json\n"), projectKey)
+		fmt.Printf(style.StyleRed("Project %s not found in config.json\n"), projectKey)
 		return false
 	}
 
-	internal.CurrentInstance = internal.JiraInstance{
+	internal.CurrentInstance = models.JiraInstance{
 		Name:    projectKey,
 		BaseURL: proj.URL,
 		Email:   proj.Email,
 		Token:   apiKey,
 	}
 
-	fmt.Printf(internal.StyleDim("Fetching from %s...\n"), internal.CurrentInstance.BaseURL)
+	fmt.Printf(style.StyleDim("Fetching from %s...\n"), internal.CurrentInstance.BaseURL)
 	internal.FetchIssues(fmt.Sprintf("project = %s AND statusCategory != Done", projectKey))
 
 	return true
@@ -48,28 +51,28 @@ func handleDetails(parts []string) bool {
 	}
 
 	if len(internal.LastEntries) == 0 {
-		fmt.Println(internal.StyleRed("First, pull the issues."))
+		fmt.Println(style.StyleRed("First, pull the issues."))
 		return false
 	}
 
 	key := strings.ToUpper(parts[1])
 	if e, ok := internal.EntriesCache[key]; ok {
-		fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.StatusCategory.Name), internal.StyleDim(e.Fields.Assignee.Name))
+		fmt.Printf("\n%s - %s %s | %s (%s)\n", style.GetPriorityIcon(e.Fields.Priority.Name), style.StyleGreen("["+e.Key+"]"), style.StyleBold(e.Fields.Summary), style.StyleYellow(e.Fields.Status.StatusCategory.Name), style.StyleDim(e.Fields.Assignee.Name))
 		fmt.Println(strings.Repeat("-", 40))
 		if e.Fields.ParsedDescription == "" {
-			e.Fields.ParsedDescription = internal.ExtractPlainText(e.Fields.Description)
+			e.Fields.ParsedDescription = helpers.ExtractPlainText(e.Fields.Description)
 		}
 		if e.Fields.ParsedDescription == "" {
-			fmt.Println(internal.StyleDim("No description provided."))
+			fmt.Println(style.StyleDim("No description provided."))
 		} else {
 			fmt.Println(e.Fields.ParsedDescription)
 		}
 	} else {
-		fmt.Println(internal.StyleRed("Issue not found in current pull."))
+		fmt.Println(style.StyleRed("Issue not found in current pull."))
 		return false
 	}
 
-	fmt.Println(internal.StyleDim(internal.StyleYellow("Fetching comments for " + parts[1] + "...")))
+	fmt.Println(style.StyleDim(style.StyleYellow("Fetching comments for " + parts[1] + "...")))
 	internal.FetchComments(key)
 
 	return true
@@ -86,9 +89,9 @@ func handleAddComment(parts []string) bool {
 		return false
 	}
 
-	fmt.Printf(internal.StyleDim("Posting comment to %s...\n"), params[0])
+	fmt.Printf(style.StyleDim("Posting comment to %s...\n"), params[0])
 
-	fmt.Printf(internal.StyleDim("Posting comment  %s...\n"), params[1])
+	fmt.Printf(style.StyleDim("Posting comment  %s...\n"), params[1])
 	internal.AddCommentToJira(params[0], params[1])
 
 	return true
@@ -123,7 +126,7 @@ func handleFilter(parts []string) bool {
 	}
 	searchKey := strings.ToLower(strings.Trim(params[1], "\""))
 
-	fmt.Printf(internal.StyleDim(internal.StyleYellow("Filtering local results for %s: %s\n")), field, searchKey)
+	fmt.Printf(style.StyleDim(style.StyleYellow("Filtering local results for %s: %s\n")), field, searchKey)
 
 	//Initialize Table
 	t := table.NewWriter()
@@ -143,11 +146,11 @@ func handleFilter(parts []string) bool {
 			foundCount++
 
 			// Styling logic
-			issueKey := internal.StyleGreen(e.Key)
+			issueKey := style.StyleGreen(e.Key)
 			summary := e.Fields.Summary
 			if e.Fields.IssueType.Name == "Epic" {
-				issueKey = internal.StyleIndigo(e.Key)
-				summary = internal.StyleIndigo(internal.StyleBold(summary))
+				issueKey = style.StyleIndigo(e.Key)
+				summary = style.StyleIndigo(style.StyleBold(summary))
 			}
 
 			assignee := e.Fields.Assignee.Name
@@ -156,11 +159,11 @@ func handleFilter(parts []string) bool {
 			}
 
 			t.AppendRow(table.Row{
-				internal.GetPriorityIcon(e.Fields.Priority.Name),
+				style.GetPriorityIcon(e.Fields.Priority.Name),
 				issueKey,
 				summary,
-				internal.StyleYellow(e.Fields.Status.Name),
-				internal.StyleDim(assignee),
+				style.StyleYellow(e.Fields.Status.Name),
+				style.StyleDim(assignee),
 			})
 		}
 	}
@@ -182,7 +185,7 @@ func handleFilter(parts []string) bool {
 		t.Render()
 		fmt.Printf("\nFound %d matches in local cache.\n", foundCount)
 	} else {
-		fmt.Println(internal.StyleRed("No matching issues found in last pull."))
+		fmt.Println(style.StyleRed("No matching issues found in last pull."))
 	}
 
 	return true
@@ -192,13 +195,13 @@ func handleEpicsFilter() bool {
 	found := false
 	for _, e := range internal.LastEntries {
 		if strings.ToLower(e.Fields.IssueType.Name) == "epic" {
-			fmt.Printf("\n%s - %s %s | %s\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleIndigo("["+e.Key+"]"), internal.StyleIndigo(internal.StyleBold(e.Fields.Summary)), internal.StyleYellow(e.Fields.Status.Name))
+			fmt.Printf("\n%s - %s %s | %s\n", style.GetPriorityIcon(e.Fields.Priority.Name), style.StyleIndigo("["+e.Key+"]"), style.StyleIndigo(style.StyleBold(e.Fields.Summary)), style.StyleYellow(e.Fields.Status.Name))
 			fmt.Println(strings.Repeat("-", 40))
 			found = true
 		}
 	}
 	if !found {
-		fmt.Println(internal.StyleRed("No Epics found in last pull."))
+		fmt.Println(style.StyleRed("No Epics found in last pull."))
 		return false
 	}
 	return true
@@ -208,19 +211,19 @@ func handleMyIssues() bool {
 	found := false
 	for _, e := range internal.LastEntries {
 		if strings.EqualFold(e.Fields.Assignee.EmailAddress, internal.CurrentInstance.Email) {
-			issueKey := internal.StyleGreen("[" + e.Key + "]")
-			issueSummary := internal.StyleBold(e.Fields.Summary)
+			issueKey := style.StyleGreen("[" + e.Key + "]")
+			issueSummary := style.StyleBold(e.Fields.Summary)
 			if e.Fields.IssueType.Name == "Epic" {
-				issueKey = internal.StyleIndigo("[" + e.Key + "]")
-				issueSummary = internal.StyleIndigo(internal.StyleBold(e.Fields.Summary))
+				issueKey = style.StyleIndigo("[" + e.Key + "]")
+				issueSummary = style.StyleIndigo(style.StyleBold(e.Fields.Summary))
 			}
-			fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), issueKey, issueSummary, internal.StyleYellow(e.Fields.Status.Name), internal.StyleDim(e.Fields.Assignee.Name))
+			fmt.Printf("\n%s - %s %s | %s (%s)\n", style.GetPriorityIcon(e.Fields.Priority.Name), issueKey, issueSummary, style.StyleYellow(e.Fields.Status.Name), style.StyleDim(e.Fields.Assignee.Name))
 			fmt.Println(strings.Repeat("-", 40))
 			found = true
 		}
 	}
 	if !found {
-		fmt.Println(internal.StyleRed("Issue not found in last pull."))
+		fmt.Println(style.StyleRed("Issue not found in last pull."))
 		return false
 	}
 	return true
@@ -234,19 +237,19 @@ func handleStatus(parts []string) bool {
 	issueKey := strings.ToUpper(parts[1])
 
 	// Fetch potential values
-	fmt.Println(internal.StyleDim("Fetching valid transitions for " + issueKey + "..."))
+	fmt.Println(style.StyleDim("Fetching valid transitions for " + issueKey + "..."))
 	transitions, err := internal.GetAvailableTransitions(issueKey)
 	if err != nil || len(transitions) == 0 {
-		fmt.Println(internal.StyleRed("Could not fetch transitions or no moves available."))
+		fmt.Println(style.StyleRed("Could not fetch transitions or no moves available."))
 		return false
 	}
 
 	// Display the "Menu"
-	fmt.Println(internal.StyleBold("\nSelect new status:"))
+	fmt.Println(style.StyleBold("\nSelect new status:"))
 	for i, t := range transitions {
-		fmt.Printf("%d) %s\n", i+1, internal.StyleYellow(t.Name))
+		fmt.Printf("%d) %s\n", i+1, style.StyleYellow(t.Name))
 	}
-	fmt.Print(internal.StyleCyan("Choose option (or 'c' to cancel): "))
+	fmt.Print(style.StyleCyan("Choose option (or 'c' to cancel): "))
 
 	// Get user selection
 	var choice string
@@ -260,16 +263,16 @@ func handleStatus(parts []string) bool {
 	idx := 0
 	fmt.Sscanf(choice, "%d", &idx)
 	if idx < 1 || idx > len(transitions) {
-		fmt.Println(internal.StyleRed("Invalid selection."))
+		fmt.Println(style.StyleRed("Invalid selection."))
 		return false
 	}
 
 	selected := transitions[idx-1]
 	err = internal.PerformTransition(issueKey, selected.Id)
 	if err != nil {
-		fmt.Println(internal.StyleRed("Update failed: ") + err.Error())
+		fmt.Println(style.StyleRed("Update failed: ") + err.Error())
 	} else {
-		fmt.Println(internal.StyleGreen("✔ Status changed to " + selected.Name))
+		fmt.Println(style.StyleGreen("✔ Status changed to " + selected.Name))
 	}
 	return true
 }
@@ -285,8 +288,30 @@ func handleAssign(parts []string) bool {
 	if issue, ok := internal.EntriesCache[key]; ok {
 		internal.AssignInteractive(issue.Key)
 	} else {
-		fmt.Println(internal.StyleRed("Issue not found in current pull."))
+		fmt.Println(style.StyleRed("Issue not found in current pull."))
 	}
+	return true
+}
+
+func handleSearch(parts []string) bool {
+	if len(parts) < 2 {
+		printCommandUsage("search")
+		return false
+	}
+
+	// Remove quotes if the user provided them
+	keyword := strings.Trim(parts[1], "\"")
+
+	// Construct the JQL for keyword search
+	// text ~ "keyword" searches summary, description, and comments
+	jql := fmt.Sprintf("text ~ \"%s\"", keyword)
+
+	fmt.Printf(style.StyleYellow("🔍 Searching for issues containing: \"%s\"...\n"), keyword)
+
+	// Use your existing FetchIssues!
+	// This will clear the current pull and replace it with the search results
+	internal.FetchIssues(jql)
+
 	return true
 }
 
@@ -294,33 +319,36 @@ func printCommandUsage(name string) {
 	fmt.Println("Usage:")
 	switch name {
 	case "filter":
-		fmt.Println(internal.StyleYellow("  filter ---status In Progress"))
-		fmt.Println(internal.StyleYellow("  filter ---prio High"))
-		fmt.Println(internal.StyleYellow("  filter ---myIssues"))
-		fmt.Println(internal.StyleYellow("  filter ---currentSprint"))
-		fmt.Println(internal.StyleYellow("  filter ---backlog"))
-		fmt.Println(internal.StyleYellow("  filter ---epics"))
+		fmt.Println(style.StyleYellow("  filter ---status In Progress"))
+		fmt.Println(style.StyleYellow("  filter ---prio High"))
+		fmt.Println(style.StyleYellow("  filter ---myIssues"))
+		fmt.Println(style.StyleYellow("  filter ---currentSprint"))
+		fmt.Println(style.StyleYellow("  filter ---backlog"))
+		fmt.Println(style.StyleYellow("  filter ---epics"))
 
 	case "pull":
-		fmt.Println(internal.StyleYellow("  pull ---{{ProjectKey}}"))
+		fmt.Println(style.StyleYellow("  pull ---{{ProjectKey}}"))
 
 	case "details":
-		fmt.Println(internal.StyleYellow("  details ---{{Key}}"))
-		fmt.Println(internal.StyleYellow("  details ---epic {{Key}}"))
+		fmt.Println(style.StyleYellow("  details ---{{Key}}"))
+		fmt.Println(style.StyleYellow("  details ---epic {{Key}}"))
 
 	case "addComment":
-		fmt.Println(internal.StyleYellow("  addComment {{Key}} \"Your comment\""))
+		fmt.Println(style.StyleYellow("  addComment {{Key}} \"Your comment\""))
 
 	case "status":
-		fmt.Println(internal.StyleYellow("  status ---{{KEY}}"))
+		fmt.Println(style.StyleYellow("  status ---{{KEY}}"))
 
 	case "assign":
-		fmt.Println(internal.StyleYellow("  assign ---{{KEY}}"))
+		fmt.Println(style.StyleYellow("  assign ---{{KEY}}"))
+
+	case "search":
+		fmt.Println(style.StyleYellow("  search ---\"your keyword or phrase\""))
 	}
 }
 
 func main() {
-	internal.PrintHeader()
+	style.PrintHeader()
 
 	err := godotenv.Load()
 	if err != nil {
@@ -331,12 +359,12 @@ func main() {
 
 	configRaw, err := os.ReadFile("config.json")
 	if err != nil {
-		fmt.Println(internal.StyleRed("✘ Error: config.json not found."))
-		fmt.Println(internal.StyleDim("Please create a config.json file in the root directory."))
+		fmt.Println(style.StyleRed("✘ Error: config.json not found."))
+		fmt.Println(style.StyleDim("Please create a config.json file in the root directory."))
 		return
 	}
 
-	var config internal.Config
+	var config models.Config
 
 	errUnmarshal := json.Unmarshal(configRaw, &config)
 	if errUnmarshal != nil {
@@ -347,7 +375,7 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
-		fmt.Print(internal.StyleBlue(internal.StyleBold("\nodin waits for your command! > ")))
+		fmt.Print(style.StyleBlue(style.StyleBold("\nodin waits for your command! > ")))
 		if !scanner.Scan() {
 			break
 		}
@@ -387,30 +415,10 @@ func main() {
 				continue
 			}
 
-		case "search": // TODO -> replace with actual text search
-			if len(parts) < 2 {
-				fmt.Println("Usage: search ---{{Code-123}}")
+		case "search": // search issues with keyword
+			if !handleSearch(parts) {
 				continue
 			}
-			searchKey := strings.ToLower(strings.Trim(parts[1], "\""))
-
-			if e, ok := internal.EntriesCache[searchKey]; ok {
-				fmt.Printf("\n%s - %s %s | %s (%s)\n", internal.GetPriorityIcon(e.Fields.Priority.Name), internal.StyleGreen("["+e.Key+"]"), internal.StyleBold(e.Fields.Summary), internal.StyleYellow(e.Fields.Status.Name), internal.StyleDim(e.Fields.Assignee.Name))
-				fmt.Println(strings.Repeat("-", 40))
-				if e.Fields.ParsedDescription == "" {
-					e.Fields.ParsedDescription = internal.ExtractPlainText(e.Fields.Description)
-				}
-				if e.Fields.ParsedDescription == "" {
-					fmt.Println(internal.StyleDim("No description provided."))
-				} else {
-					fmt.Println(e.Fields.ParsedDescription)
-				}
-			} else {
-				fmt.Println(internal.StyleRed("Issue not found in current pull."))
-			}
-
-			fmt.Println(internal.StyleDim(internal.StyleYellow("Fetching comments for " + parts[1] + "...")))
-			internal.FetchComments(searchKey)
 
 		case "status": // change status of the issue
 			if !handleStatus(parts) {
@@ -423,13 +431,13 @@ func main() {
 			}
 
 		case "exit":
-			fmt.Println(internal.StyleBlue(internal.StyleBold("Goodbye!")))
+			fmt.Println(style.StyleBlue(style.StyleBold("Goodbye!")))
 			return
 		case "help":
-			internal.PrintCommandList()
+			style.PrintCommandList()
 
 		default:
-			fmt.Println(internal.StyleRed("Unknown command. See menu above."))
+			fmt.Println(style.StyleRed("Unknown command. See menu above."))
 		}
 	}
 }

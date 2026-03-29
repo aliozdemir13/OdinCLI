@@ -22,7 +22,7 @@ Command	Action:
 - filter ---myIssues (case insensitive) -> Quick-filter to show only issues assigned to you. This filter always work on the current context (sprint, backlog or all issues)
 - filter ---epics (case insensitive) -> Quick-filter to show only the epics. This filter always work on the current context (sprint, backlog or all issues)
 - status ---{{KEY}}	Allo updating status of the issue. Available issues getting displayed as menu options to select for this command.
-- search ---{{KEY}} -> Performs a deep search for a specific ticket key.
+- search ---"your keyword or phrase" -> Performs a text search based on given phrase or keyword.
 - assign ---{{KEY}} -> change assignment of the issue.
 - help -> Lists all commands.
 - exit -> Safely closes the application and clears the session.
@@ -63,7 +63,7 @@ go build -o odin
 - [X] Adding search epics and display all the child issues under it
 - [X] Extend filter to see current sprint and backlog
 - [ ] Adding ability of mentioning people in comments
-- [ ] Update search command for text search
+- [X] Update search command for text search
 
 ## Contributing
 This is an open-source project! If you have ideas for new enterprise integrations (Slack, GitHub, ADO), feel free to open an issue or a PR.

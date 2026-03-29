@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log_tracker/internal/helpers"
+	"log_tracker/internal/models"
+	"log_tracker/internal/style"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,9 +18,9 @@ import (
 )
 
 var (
-	CurrentInstance JiraInstance
-	LastEntries     []Issues
-	EntriesCache    map[string]Issues
+	CurrentInstance models.JiraInstance
+	LastEntries     []models.Issues
+	EntriesCache    map[string]models.Issues
 )
 
 // apiURL combines the base URL with the specific API path
@@ -50,13 +53,13 @@ func newRequest(method, path string, bodyData interface{}) (*http.Request, error
 func performRequest(req *http.Request, expectedStatus int, target interface{}) error {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf(StyleRed("Network Error: %v"), err)
+		return fmt.Errorf(style.StyleRed("Network Error: %v"), err)
 	}
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != expectedStatus {
-		return fmt.Errorf(StyleRed("Jira Error (%d): %s"), resp.StatusCode, string(body))
+		return fmt.Errorf(style.StyleRed("Jira Error (%d): %s"), resp.StatusCode, string(body))
 	}
 
 	if target != nil {
@@ -68,20 +71,17 @@ func performRequest(req *http.Request, expectedStatus int, target interface{}) e
 
 func FetchIssues(jql string) {
 	if CurrentInstance.BaseURL == "" {
-		fmt.Println(StyleRed("Error: No instance selected. Use 'pull ---{{ProjectKey}}' first."))
+		fmt.Println(style.StyleRed("Error: No instance selected. Use 'pull ---{{ProjectKey}}' first."))
 		return
 	}
-
-	// 1. Initialize the Table
-	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"PRIORITY", "TYPE", "KEY", "SUMMARY", "STATUS", "ASSIGNEE"})
 
 	nextPageToken := ""
 	isLast := false
 	issueCount := 0
-	LastEntries = []Issues{}
-	EntriesCache = make(map[string]Issues)
+	LastEntries = []models.Issues{}
+	EntriesCache = make(map[string]models.Issues)
+	// prepare table data
+	var tableBody []table.Row
 
 	for !isLast {
 		endpoint := apiURL("/rest/api/3/search/jql")
@@ -101,7 +101,7 @@ func FetchIssues(jql string) {
 		u.RawQuery = q.Encode()
 
 		req, _ := newRequest("GET", u.String(), nil)
-		var apiData JiraResponse
+		var apiData models.JiraResponse
 
 		if err := performRequest(req, http.StatusOK, &apiData); err != nil {
 			fmt.Println(err)
@@ -109,7 +109,7 @@ func FetchIssues(jql string) {
 		}
 
 		if len(apiData.Issues) == 0 && issueCount == 0 {
-			fmt.Println(StyleYellow("No issues found for this query."))
+			fmt.Println(style.StyleYellow("No issues found for this query."))
 			return
 		}
 
@@ -118,26 +118,26 @@ func FetchIssues(jql string) {
 			EntriesCache[issue.Key] = issue
 
 			// Prepare Styling
-			prioIcon := GetPriorityIcon(issue.Fields.Priority.Name)
+			prioIcon := style.GetPriorityIcon(issue.Fields.Priority.Name)
 			issueType := issue.Fields.IssueType.Name
-			issueKey := StyleGreen(issue.Key)
+			issueKey := style.StyleGreen(issue.Key)
 			issueSummary := issue.Fields.Summary
-			issueStatus := StyleYellow(issue.Fields.Status.Name)
+			issueStatus := style.StyleYellow(issue.Fields.Status.Name)
 
 			assignee := issue.Fields.Assignee.Name
 			if assignee == "" {
 				assignee = "Unassigned"
 			}
-			assignee = StyleDim(assignee)
+			assignee = style.StyleDim(assignee)
 
 			// Apply Epic styling logic
 			if issueType == "Epic" {
-				issueKey = StyleIndigo(issue.Key)
-				issueSummary = StyleIndigo(StyleBold(issueSummary))
+				issueKey = style.StyleIndigo(issue.Key)
+				issueSummary = style.StyleIndigo(style.StyleBold(issueSummary))
 			}
 
 			// 2. Append Row to Table
-			t.AppendRow(table.Row{
+			tableBody = append(tableBody, table.Row{
 				prioIcon,
 				issueType,
 				issueKey,
@@ -152,56 +152,41 @@ func FetchIssues(jql string) {
 		nextPageToken = apiData.NextPageToken
 	}
 
-	// 3. Configure Table Style
-	style := table.StyleLight
-	style.Options.DrawBorder = false
-	style.Options.SeparateColumns = false
-	style.Options.SeparateHeader = true
-	style.Box.PaddingRight = "  "
-	t.SetStyle(style)
-
-	// 4. Set column limit for Summary so it doesn't break the terminal
-	t.SetColumnConfigs([]table.ColumnConfig{
-		{Name: "SUMMARY", WidthMax: 60},
-	})
-
-	// 5. Render
-	fmt.Println() // Add a little breathing room
-	t.Render()
-	fmt.Printf("\n"+StyleGreen("Successfully pulled %d issues.")+"\n", issueCount)
+	style.CreateTable(table.Row{"PRIORITY", "TYPE", "KEY", "SUMMARY", "STATUS", "ASSIGNEE"}, tableBody, []table.ColumnConfig{{Name: "SUMMARY", WidthMax: 60}})
+	fmt.Printf("\n"+style.StyleGreen("Successfully pulled %d issues.")+"\n", issueCount)
 }
 
 func FetchComments(issueKey string) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/comment", issueKey)
 	req, _ := newRequest("GET", apiURL(path), nil)
 
-	var apiData JiraCommentResponse
+	var apiData models.JiraCommentResponse
 	if err := performRequest(req, http.StatusOK, &apiData); err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Printf(StyleBold("\n--- Comments for %s (%d) ---\n"), issueKey, apiData.Total)
+	fmt.Printf(style.StyleBold("\n--- Comments for %s (%d) ---\n"), issueKey, apiData.Total)
 	for _, c := range apiData.Comments {
-		commentText := strings.TrimSpace(ExtractPlainText(c.Body))
+		commentText := strings.TrimSpace(helpers.ExtractPlainText(c.Body))
 		statusTag := ""
 		if c.Created != c.Updated {
-			statusTag = StyleYellow("[edited at " + c.Updated + "]")
+			statusTag = style.StyleYellow("[edited at " + c.Updated + "]")
 		}
 
-		fmt.Printf("%s | %s %s\n", StyleGreen(c.Author.DisplayName), StyleDim(c.Created), statusTag)
-		fmt.Printf("%s\n%s\n", commentText, StyleDim(strings.Repeat("-", 40)))
+		fmt.Printf("%s | %s %s\n", style.StyleGreen(c.Author.DisplayName), style.StyleDim(c.Created), statusTag)
+		fmt.Printf("%s\n%s\n", commentText, style.StyleDim(strings.Repeat("-", 40)))
 	}
 }
 
 func AddCommentToJira(issueKey string, commentText string) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/comment", issueKey)
-	payload := AddCommentRequest{
-		Body: JiraDescription{
+	payload := models.AddCommentRequest{
+		Body: models.JiraDescription{
 			Type: "doc", Version: 1,
-			Content: []DescriptionNode{{
+			Content: []models.DescriptionNode{{
 				Type:    "paragraph",
-				Content: []DescriptionNode{{Type: "text", Text: commentText}},
+				Content: []models.DescriptionNode{{Type: "text", Text: commentText}},
 			}},
 		},
 	}
@@ -211,14 +196,14 @@ func AddCommentToJira(issueKey string, commentText string) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf(StyleGreen("✔ Comment added successfully to %s\n"), issueKey)
+	fmt.Printf(style.StyleGreen("✔ Comment added successfully to %s\n"), issueKey)
 }
 
-func GetAvailableTransitions(issueKey string) ([]Transition, error) {
+func GetAvailableTransitions(issueKey string) ([]models.Transition, error) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/transitions", issueKey)
 	req, _ := newRequest("GET", apiURL(path), nil)
 
-	var data JiraTransitionsResponse
+	var data models.JiraTransitionsResponse
 	err := performRequest(req, http.StatusOK, &data)
 	return data.Transitions, err
 }
@@ -233,24 +218,24 @@ func PerformTransition(issueKey string, transitionId string) error {
 	return performRequest(req, http.StatusNoContent, nil)
 }
 
-func SearchUsers(query string) ([]JiraUser, error) {
+func SearchUsers(query string) ([]models.JiraUser, error) {
 	path := fmt.Sprintf("/rest/api/3/user/search?query=%s&maxResults=5", url.QueryEscape(query))
 	req, _ := newRequest("GET", apiURL(path), nil)
 
-	var users []JiraUser
+	var users []models.JiraUser
 	err := performRequest(req, http.StatusOK, &users)
 	return users, err
 }
 
 func AssignIssue(issueKey string, accountId string) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/assignee", issueKey)
-	req, _ := newRequest("PUT", apiURL(path), AssigneePayload{AccountId: accountId})
+	req, _ := newRequest("PUT", apiURL(path), models.AssigneePayload{AccountId: accountId})
 
 	if err := performRequest(req, http.StatusNoContent, nil); err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf(StyleGreen("✔ %s assigned successfully.\n"), issueKey)
+	fmt.Printf(style.StyleGreen("✔ %s assigned successfully.\n"), issueKey)
 }
 
 func FetchEpicChildren(epicKey string) {
@@ -262,31 +247,27 @@ func FetchEpicChildren(epicKey string) {
 	path := fmt.Sprintf("/rest/api/3/search/jql?jql=%s&fields=%s&maxResults=100", url.QueryEscape(jql), url.QueryEscape(fields))
 
 	req, _ := newRequest("GET", apiURL(path), nil)
-	var apiData JiraResponse
+	var apiData models.JiraResponse
 	if err := performRequest(req, http.StatusOK, &apiData); err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	if len(apiData.Issues) == 0 {
-		fmt.Println(StyleYellow("No child issues found for this epic."))
+		fmt.Println(style.StyleYellow("No child issues found for this epic."))
 		return
 	}
 
-	fmt.Printf(StyleBold("\nIssues in Epic %s (%d items):\n\n"),
-		StyleIndigo("["+epicKey+"] "+EntriesCache[epicKey].Fields.Summary), len(apiData.Issues))
+	fmt.Printf(style.StyleBold("\nIssues in Epic %s (%d items):\n\n"),
+		style.StyleIndigo("["+epicKey+"] "+EntriesCache[epicKey].Fields.Summary), len(apiData.Issues))
 
-	// 1. Create the Table Writer
-	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
-
-	// 2. Define Headers
-	t.AppendHeader(table.Row{"TYPE", "KEY", "SUMMARY", "PRIORITY", "STATUS", "ASSIGNEE"})
+	// prepare table data
+	var tableBody []table.Row
 
 	for _, issue := range apiData.Issues {
 		// Prepare data
 		issueType := issue.Fields.IssueType.Name
-		key := StyleGreen(issue.Key)
+		key := style.StyleGreen(issue.Key)
 
 		summary := issue.Fields.Summary
 		// The library handles wrapping, but if you want strict truncation:
@@ -294,17 +275,17 @@ func FetchEpicChildren(epicKey string) {
 			summary = summary[:37] + "..."
 		}
 
-		prio := GetPriorityIcon(issue.Fields.Priority.Name)
-		status := StyleYellow(issue.Fields.Status.Name)
+		prio := style.GetPriorityIcon(issue.Fields.Priority.Name)
+		status := style.StyleYellow(issue.Fields.Status.Name)
 
 		assignee := issue.Fields.Assignee.Name
 		if assignee == "" {
 			assignee = "Unassigned"
 		}
-		assignee = StyleDim(assignee)
+		assignee = style.StyleDim(assignee)
 
-		// 3. Add Row
-		t.AppendRow(table.Row{
+		// Add Row
+		tableBody = append(tableBody, table.Row{
 			issueType,
 			key,
 			summary,
@@ -314,48 +295,11 @@ func FetchEpicChildren(epicKey string) {
 		})
 	}
 
-	// 4. Style the table to look like your original request
-	// We use StyleLight but remove the borders for a "clean" look
-	style := table.StyleLight
-	style.Options.DrawBorder = false
-	style.Options.SeparateColumns = false
-	style.Options.SeparateHeader = true
-	style.Box.PaddingLeft = ""
-	style.Box.PaddingRight = "   " // Matches your spacing
-	t.SetStyle(style)
-
-	// 5. Render
-	t.Render()
-	fmt.Println()
-}
-
-func ExtractPlainText(desc JiraDescription) string {
-	var builder strings.Builder
-	for _, node := range desc.Content {
-		walkNodes(node, &builder)
-	}
-	return builder.String()
-}
-
-func walkNodes(node DescriptionNode, b *strings.Builder) {
-	if node.Text != "" {
-		b.WriteString(node.Text)
-	}
-	if node.Type == "mention" {
-		if val, ok := node.Attrs["text"]; ok {
-			b.WriteString(StyleBlue(fmt.Sprintf("%v", val)))
-		}
-	}
-	for _, child := range node.Content {
-		walkNodes(child, b)
-		if child.Type == "paragraph" || child.Type == "listItem" {
-			b.WriteString("\n")
-		}
-	}
+	style.CreateTable(table.Row{"TYPE", "KEY", "SUMMARY", "PRIORITY", "STATUS", "ASSIGNEE"}, tableBody, nil)
 }
 
 func AssignInteractive(issueKey string) {
-	fmt.Print(StyleBold("Search user to assign: "))
+	fmt.Print(style.StyleBold("Search user to assign: "))
 	scanner := bufio.NewScanner(os.Stdin)
 	if !scanner.Scan() {
 		return
@@ -367,24 +311,24 @@ func AssignInteractive(issueKey string) {
 
 	users, err := SearchUsers(input)
 	if err != nil || len(users) == 0 {
-		fmt.Println(StyleRed("No users found matching: " + input))
+		fmt.Println(style.StyleRed("No users found matching: " + input))
 		return
 	}
 
 	bestMatch := users[0]
-	recommendation := StyleYellow(bestMatch.DisplayName)
+	recommendation := style.StyleYellow(bestMatch.DisplayName)
 	if strings.HasPrefix(strings.ToLower(bestMatch.DisplayName), strings.ToLower(input)) {
-		recommendation = bestMatch.DisplayName[:len(input)] + StyleDim(bestMatch.DisplayName[len(input):])
+		recommendation = bestMatch.DisplayName[:len(input)] + style.StyleDim(bestMatch.DisplayName[len(input):])
 	}
 
-	fmt.Printf("Match found: %s. Assign %s? (y/n): ", recommendation, StyleGreen(issueKey))
+	fmt.Printf("Match found: %s. Assign %s? (y/n): ", recommendation, style.StyleGreen(issueKey))
 	var confirm string
 	fmt.Scanln(&confirm)
 
 	if strings.ToLower(confirm) == "y" {
 		AssignIssue(issueKey, bestMatch.AccountId)
 	} else if len(users) > 1 {
-		fmt.Println(StyleBold("\nOther matches:"))
+		fmt.Println(style.StyleBold("\nOther matches:"))
 		for i, u := range users {
 			fmt.Printf("%d) %s\n", i+1, u.DisplayName)
 		}
