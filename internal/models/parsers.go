@@ -70,7 +70,6 @@ func MarkdownToADF(input string) JiraDescription {
 				if currentList != nil {
 					rootContent = append(rootContent, *currentList)
 				}
-
 				currentList = &DescriptionNode{Type: "taskList"}
 				currentListType = "taskList"
 			}
@@ -96,8 +95,7 @@ func MarkdownToADF(input string) JiraDescription {
 			}
 
 			rootContent = append(rootContent, DescriptionNode{
-				Type: "paragraph",
-				// This is the key change: process the text for mentions
+				Type:    "paragraph",
 				Content: parseInlineMention(line),
 			})
 		}
@@ -147,15 +145,14 @@ func parseBulletItem(line string) DescriptionNode {
 
 func isTaskItem(line string) bool {
 	l := strings.ToLower(line)
-	return strings.HasPrefix(l, "- [ ] ") || strings.HasPrefix(l, "- [x] ")
+	return strings.HasPrefix(l, "- [ ] ") || strings.HasPrefix(l, "- [X] ")
 }
 
 func parseTaskItem(line string) DescriptionNode {
 	state := "TODO"
-	if strings.HasPrefix(strings.ToLower(line), "- [x] ") {
+	if strings.HasPrefix(strings.ToLower(line), "- [X] ") {
 		state = "DONE"
 	}
-	text := strings.TrimSpace(line[6:])
 
 	return DescriptionNode{
 		Type: "taskItem",
@@ -166,7 +163,7 @@ func parseTaskItem(line string) DescriptionNode {
 		Content: []DescriptionNode{
 			{
 				Type:    "paragraph",
-				Content: parseInlineMention(text), // Wrap inline items in a paragraph
+				Content: parseInlineMention(strings.TrimSpace(line[6:])),
 			},
 		},
 	}
@@ -176,7 +173,6 @@ func parseInlineMention(input string) []DescriptionNode {
 	var nodes []DescriptionNode
 
 	// Regular expression to find [[accountId|DisplayName]]
-	// This is much safer than manual splitting
 	mentionRegex := regexp.MustCompile(`\[\[(.*?)\|(.*?)\]\]`)
 
 	lastIndex := 0

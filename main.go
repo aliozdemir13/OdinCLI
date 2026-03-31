@@ -84,11 +84,6 @@ func handleAddComment(parts []string) bool {
 		printCommandUsage("addComment")
 		return false
 	}
-	/*params := strings.SplitN(parts[1], " ", 2)
-	if len(params) < 2 {
-		printCommandUsage("addComment")
-		return false
-	}*/
 
 	c := handleMarkdownEditor()
 	if c == "" {

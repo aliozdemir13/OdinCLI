@@ -81,6 +81,7 @@ OdinCLI wouldn't be possible without these amazing open-source libraries:
 
 *   [Go-Pretty](https://github.com/jedib0t/go-pretty) - For the high-performance tables and text styling.
 *   [GoDotEnv](https://github.com/joho/godotenv) - For seamless environment variable management.
+*   [Charmbracelet] (https://github.com/charmbracelet) - for TUI and text editors
 
 ## License
 MIT License - see LICENSE for details.
