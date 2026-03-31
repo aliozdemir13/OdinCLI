@@ -117,3 +117,24 @@ type Sprint struct {
 	Name  string `json:"name"`
 	State string `json:"state"` // "active", "closed", "future"
 }
+
+type CreateIssueRequest struct {
+	Fields CreateFields `json:"fields"`
+}
+
+type CreateFields struct {
+	Project     ProjectReference  `json:"project"`
+	Summary     string            `json:"summary"`
+	Description JiraDescription   `json:"description"`
+	IssueType   IssueTypeName     `json:"issuetype"`
+	Parent      *ProjectReference `json:"parent,omitempty"` // Pointer allows null
+	Labels      []string          `json:"labels,omitempty"`
+}
+
+type ProjectReference struct {
+	Key string `json:"key"`
+}
+
+type IssueTypeName struct {
+	Name string `json:"name"`
+}

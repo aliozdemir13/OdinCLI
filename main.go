@@ -8,11 +8,12 @@ import (
 	"os"
 	"strings"
 
-	"log_tracker/internal"
-	"log_tracker/internal/helpers"
-	"log_tracker/internal/models"
-	"log_tracker/internal/style"
-
+	"github.com/aliozdemir13/odincli/internal"
+	"github.com/aliozdemir13/odincli/internal/models"
+	"github.com/aliozdemir13/odincli/internal/style"
+	"github.com/aliozdemir13/odincli/internal/ui"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/joho/godotenv"
 )
@@ -60,7 +61,7 @@ func handleDetails(parts []string) bool {
 		fmt.Printf("\n%s - %s %s | %s (%s)\n", style.GetPriorityIcon(e.Fields.Priority.Name), style.StyleGreen("["+e.Key+"]"), style.StyleBold(e.Fields.Summary), style.StyleYellow(e.Fields.Status.StatusCategory.Name), style.StyleDim(e.Fields.Assignee.Name))
 		fmt.Println(strings.Repeat("-", 40))
 		if e.Fields.ParsedDescription == "" {
-			e.Fields.ParsedDescription = helpers.ExtractPlainText(e.Fields.Description)
+			e.Fields.ParsedDescription = models.ExtractPlainText(e.Fields.Description)
 		}
 		if e.Fields.ParsedDescription == "" {
 			fmt.Println(style.StyleDim("No description provided."))
@@ -83,16 +84,21 @@ func handleAddComment(parts []string) bool {
 		printCommandUsage("addComment")
 		return false
 	}
-	params := strings.SplitN(parts[1], " ", 2)
+	/*params := strings.SplitN(parts[1], " ", 2)
 	if len(params) < 2 {
 		printCommandUsage("addComment")
 		return false
+	}*/
+
+	c := handleMarkdownEditor()
+	if c == "" {
+		return false
 	}
 
-	fmt.Printf(style.StyleDim("Posting comment to %s...\n"), params[0])
+	fmt.Printf(style.StyleDim("Posting comment to %s...\n"), parts[1])
 
-	fmt.Printf(style.StyleDim("Posting comment  %s...\n"), params[1])
-	internal.AddCommentToJira(params[0], params[1])
+	fmt.Printf(style.StyleDim("Posting comment  %s...\n"), c)
+	internal.AddCommentToJira(parts[1], c)
 
 	return true
 }
@@ -308,10 +314,100 @@ func handleSearch(parts []string) bool {
 
 	fmt.Printf(style.StyleYellow("🔍 Searching for issues containing: \"%s\"...\n"), keyword)
 
-	// Use your existing FetchIssues!
 	// This will clear the current pull and replace it with the search results
 	internal.FetchIssues(jql)
 
+	return true
+}
+
+func handleMarkdownEditor() string {
+	p := tea.NewProgram(ui.InitialModel())
+	m, err := p.Run()
+	if err != nil {
+		fmt.Printf("Error running editor: %v", err)
+		return ""
+	}
+
+	finalModel := m.(ui.EditorModel)
+
+	if finalModel.Aborted || finalModel.Content == "" {
+		fmt.Println(style.StyleYellow("Comment cancelled."))
+		return ""
+	}
+
+	fmt.Println(style.StyleDim("Processing markup\n"))
+
+	return finalModel.Content
+}
+
+func handleCreateIssue() bool {
+	var (
+		summary   string
+		issueType string
+		effort    string
+		parent    string
+	)
+
+	// Create a multi-step form
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Summary").
+				Value(&summary).
+				Validate(func(str string) error {
+					if str == "" {
+						return fmt.Errorf("Summary is required")
+					}
+					return nil
+				}),
+
+			huh.NewSelect[string]().
+				Title("Issue Type").
+				Options(huh.NewOptions("Task", "Bug", "Story", "Sub-task", "Epic")...).
+				Value(&issueType),
+		),
+		huh.NewGroup(
+			huh.NewInput().Title("Parent Key (Optional)").Value(&parent),
+			huh.NewInput().Title("Story Points (Optional)").Value(&effort),
+		),
+	)
+
+	err := form.Run()
+	if err != nil {
+		fmt.Println("Cancelled.")
+		return false
+	}
+
+	//Launch Bubble Tea Editor for the Description
+	fmt.Println(style.StyleIndigo("Opening Editor for Description..."))
+	p := tea.NewProgram(ui.InitialModel())
+	m, _ := p.Run()
+	finalModel := m.(ui.EditorModel)
+
+	if finalModel.Aborted {
+		fmt.Println(style.StyleRed("Creation cancelled."))
+		return false
+	}
+
+	// Build Payload
+	payload := models.CreateIssueRequest{}
+	payload.Fields.Project.Key = internal.CurrentInstance.Name
+	payload.Fields.Summary = summary
+	payload.Fields.IssueType.Name = issueType
+	/*payload.Fields.Description = models.JiraDescription{
+		Type: "doc", Version: 1,
+		Content: []models.DescriptionNode{{
+			Type:    "paragraph",
+			Content: []models.DescriptionNode{{Type: "text", Text: finalModel.Content}},
+		}},
+	}*/
+	payload.Fields.Description = models.MarkdownToADF(finalModel.Content)
+
+	if parent != "" {
+		payload.Fields.Parent = &models.ProjectReference{Key: strings.ToUpper(parent)}
+	}
+
+	internal.CreateIssueInJira(payload, effort)
 	return true
 }
 
@@ -429,6 +525,9 @@ func main() {
 			if !handleAssign(parts) {
 				continue
 			}
+
+		case "create":
+			handleCreateIssue()
 
 		case "exit":
 			fmt.Println(style.StyleBlue(style.StyleBold("Goodbye!")))
