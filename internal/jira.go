@@ -57,7 +57,6 @@ func performRequest(req *http.Request, expectedStatus int, target interface{}) e
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
-	fmt.Printf("%s", body)
 	if resp.StatusCode != expectedStatus {
 		return fmt.Errorf(style.StyleRed("Jira Error (%d): %s"), resp.StatusCode, string(body))
 	}
