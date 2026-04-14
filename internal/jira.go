@@ -6,14 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log_tracker/internal/helpers"
-	"log_tracker/internal/models"
-	"log_tracker/internal/style"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
+	"github.com/aliozdemir13/odincli/internal/models"
+	"github.com/aliozdemir13/odincli/internal/style"
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
@@ -168,7 +167,7 @@ func FetchComments(issueKey string) {
 
 	fmt.Printf(style.StyleBold("\n--- Comments for %s (%d) ---\n"), issueKey, apiData.Total)
 	for _, c := range apiData.Comments {
-		commentText := strings.TrimSpace(helpers.ExtractPlainText(c.Body))
+		commentText := strings.TrimSpace(models.ParseADF(c.Body))
 		statusTag := ""
 		if c.Created != c.Updated {
 			statusTag = style.StyleYellow("[edited at " + c.Updated + "]")
@@ -182,13 +181,7 @@ func FetchComments(issueKey string) {
 func AddCommentToJira(issueKey string, commentText string) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/comment", issueKey)
 	payload := models.AddCommentRequest{
-		Body: models.JiraDescription{
-			Type: "doc", Version: 1,
-			Content: []models.DescriptionNode{{
-				Type:    "paragraph",
-				Content: []models.DescriptionNode{{Type: "text", Text: commentText}},
-			}},
-		},
+		Body: models.MarkdownToADF(commentText),
 	}
 
 	req, _ := newRequest("POST", apiURL(path), payload)
@@ -339,4 +332,35 @@ func AssignInteractive(issueKey string) {
 			AssignIssue(issueKey, users[choice-1].AccountId)
 		}
 	}
+}
+
+func CreateIssueInJira(payload models.CreateIssueRequest, effort string) {
+	path := "/rest/api/3/issue"
+
+	// convert the struct to a Map so we can add the Custom Field for Effort or any other needed
+	// because "Story Points" for instance isn't a standard field name.
+	body, _ := json.Marshal(payload)
+	var finalMap map[string]interface{}
+	json.Unmarshal(body, &finalMap)
+
+	// Add Story Points if provided
+	// TODO: Move custom field to config.json
+	if effort != "" {
+		fields := finalMap["fields"].(map[string]interface{})
+		fields["customfield_10016"] = effort
+	}
+
+	req, _ := newRequest("POST", apiURL(path), payload)
+
+	// CreateIssue returns 201 Created and the new Key
+	var result struct {
+		Key string `json:"key"`
+	}
+
+	if err := performRequest(req, http.StatusCreated, &result); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Printf(style.StyleGreen("✔ Issue created successfully: %s\n"), result.Key)
 }

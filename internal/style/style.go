@@ -15,6 +15,7 @@ const (
 	Yellow = "\033[33m"
 	Blue   = "\033[34m"
 	Cyan   = "\033[36m"
+	Gray   = "\033[90m"
 	Indigo = "\033[38;5;141m"
 	Bold   = "\033[1m"
 )
@@ -42,7 +43,7 @@ func PrintCommandList() {
 	fmt.Println(StyleDim("Usage: filter ---currentSprint"))
 	fmt.Println(StyleDim("Usage: filter ---backlog"))
 	fmt.Println(StyleDim("Usage: filter ---epics"))
-	fmt.Println(StyleDim("Usage: addComment ---{{IssueKey}} text for the comment"))
+	fmt.Println(StyleDim("Usage: addComment ---{{IssueKey}}"))
 	fmt.Println(StyleDim("Usage: exit"))
 	fmt.Println(StyleDim("Usage: help"))
 }
@@ -55,6 +56,19 @@ func StyleRed(t string) string    { return Red + t + Reset }
 func StyleIndigo(t string) string { return Indigo + t + Reset }
 func StyleCyan(t string) string   { return Cyan + t + Reset }
 func StyleBold(t string) string   { return Bold + t + Reset }
+func StyleGray(t string) string   { return Gray + t + Reset }
+
+// CustomColor maps Jira Hex colors to basic Terminal colors
+func CustomColor(text string, hex string) string {
+	switch hex {
+	case "#bf2600":
+		return StyleRed(text) // Reddish
+	case "#0747a6":
+		return StyleBlue(text) // Bluish
+	default:
+		return text
+	}
+}
 
 func GetPriorityIcon(priority string) string {
 	switch priority {

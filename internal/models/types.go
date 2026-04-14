@@ -57,6 +57,7 @@ type DescriptionNode struct {
 	Text    string            `json:"text,omitempty"`    // Only present if type is "text"
 	Content []DescriptionNode `json:"content,omitempty"` // Recursive for paragraphs/lists
 	Attrs   map[string]any    `json:"attrs,omitempty"`   // For localId and other metadata
+	Marks   []ADFMark         `json:"marks,omitempty"`
 }
 
 type JiraDescription struct {
@@ -116,4 +117,30 @@ type Sprint struct {
 	Id    int    `json:"id"`
 	Name  string `json:"name"`
 	State string `json:"state"` // "active", "closed", "future"
+}
+
+type CreateIssueRequest struct {
+	Fields CreateFields `json:"fields"`
+}
+
+type CreateFields struct {
+	Project     ProjectReference  `json:"project"`
+	Summary     string            `json:"summary"`
+	Description JiraDescription   `json:"description"`
+	IssueType   IssueTypeName     `json:"issuetype"`
+	Parent      *ProjectReference `json:"parent,omitempty"` // Pointer allows null
+	Labels      []string          `json:"labels,omitempty"`
+}
+
+type ProjectReference struct {
+	Key string `json:"key"`
+}
+
+type IssueTypeName struct {
+	Name string `json:"name"`
+}
+
+type ADFMark struct {
+	Type  string                 `json:"type"`
+	Attrs map[string]interface{} `json:"attrs,omitempty"`
 }

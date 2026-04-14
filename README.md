@@ -19,7 +19,7 @@ Odin uses a unique `---` delimiter to separate the command from its arguments.
 | `details ---{{KEY}}` | Displays description, status, priority, and recent comments. |
 | `details ---epic {{KEY}}` | Displays all child issues belonging to a specific epic. |
 | `search ---"{{phrase}}"` | Performs a text search across summaries, descriptions, and comments. |
-| `addComment ---{{KEY}} {{text}}` | Adds a new comment to a specific issue. |
+| `addComment ---{{KEY}}` | Adds a new comment to a specific issue. This command opens a Markdown editor for writing the text. CTRL + C to cancel, CTRL + S to save the comment.|
 | `status ---{{KEY}}` | Opens an interactive menu to transition the issue status. |
 | `assign ---{{KEY}}` | Opens an interactive user search to change the assignee. |
 | `filter ---status {{VAL}}` | Filters local list by status (e.g., `filter ---status In Progress`). |
@@ -28,6 +28,7 @@ Odin uses a unique `---` delimiter to separate the command from its arguments.
 | `filter ---backlog` | **Updates Context:** Fetches the project backlog. |
 | `filter ---myIssues` | Quick-filter to show only issues assigned to you. |
 | `filter ---epics` | Quick-filter to show only Epics. |
+| `create ---{{Key}}` | Opens a markdown editor for generating the issue description. |
 | `help` | Lists all available commands. |
 | `exit` | Safely closes Odin and clears the session. |
 
@@ -67,9 +68,10 @@ go build -o odin
 - [X] Extend filter to see current sprint and backlog
 - [X] Update search command for text search
 - [ ] Adding logTime command
-- [ ] Adding create command
+- [X] Adding create issue command
 - [ ] Adding changeEstimation command
-- [ ] Adding ability of mentioning people in comments
+- [X] Adding ability of mentioning people in comments
+- [X] Bug fix about the task item adition in markup editor
 
 ## Contributing
 This is an open-source project! If you have ideas for new enterprise integrations (Slack, GitHub, ADO), feel free to open an issue or a PR.
@@ -79,6 +81,7 @@ OdinCLI wouldn't be possible without these amazing open-source libraries:
 
 *   [Go-Pretty](https://github.com/jedib0t/go-pretty) - For the high-performance tables and text styling.
 *   [GoDotEnv](https://github.com/joho/godotenv) - For seamless environment variable management.
+*   [Charmbracelet] (https://github.com/charmbracelet) - for TUI and text editors
 
 ## License
 MIT License - see LICENSE for details.
