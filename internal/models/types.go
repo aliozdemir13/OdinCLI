@@ -57,6 +57,7 @@ type DescriptionNode struct {
 	Text    string            `json:"text,omitempty"`    // Only present if type is "text"
 	Content []DescriptionNode `json:"content,omitempty"` // Recursive for paragraphs/lists
 	Attrs   map[string]any    `json:"attrs,omitempty"`   // For localId and other metadata
+	Marks   []ADFMark         `json:"marks,omitempty"`
 }
 
 type JiraDescription struct {
@@ -137,4 +138,9 @@ type ProjectReference struct {
 
 type IssueTypeName struct {
 	Name string `json:"name"`
+}
+
+type ADFMark struct {
+	Type  string                 `json:"type"`
+	Attrs map[string]interface{} `json:"attrs,omitempty"`
 }

@@ -61,7 +61,7 @@ func handleDetails(parts []string) bool {
 		fmt.Printf("\n%s - %s %s | %s (%s)\n", style.GetPriorityIcon(e.Fields.Priority.Name), style.StyleGreen("["+e.Key+"]"), style.StyleBold(e.Fields.Summary), style.StyleYellow(e.Fields.Status.StatusCategory.Name), style.StyleDim(e.Fields.Assignee.Name))
 		fmt.Println(strings.Repeat("-", 40))
 		if e.Fields.ParsedDescription == "" {
-			e.Fields.ParsedDescription = models.ExtractPlainText(e.Fields.Description)
+			e.Fields.ParsedDescription = models.ParseADF(e.Fields.Description)
 		}
 		if e.Fields.ParsedDescription == "" {
 			fmt.Println(style.StyleDim("No description provided."))
@@ -389,13 +389,6 @@ func handleCreateIssue() bool {
 	payload.Fields.Project.Key = internal.CurrentInstance.Name
 	payload.Fields.Summary = summary
 	payload.Fields.IssueType.Name = issueType
-	/*payload.Fields.Description = models.JiraDescription{
-		Type: "doc", Version: 1,
-		Content: []models.DescriptionNode{{
-			Type:    "paragraph",
-			Content: []models.DescriptionNode{{Type: "text", Text: finalModel.Content}},
-		}},
-	}*/
 	payload.Fields.Description = models.MarkdownToADF(finalModel.Content)
 
 	if parent != "" {
@@ -425,7 +418,7 @@ func printCommandUsage(name string) {
 		fmt.Println(style.StyleYellow("  details ---epic {{Key}}"))
 
 	case "addComment":
-		fmt.Println(style.StyleYellow("  addComment {{Key}} \"Your comment\""))
+		fmt.Println(style.StyleYellow("  addComment {{Key}}"))
 
 	case "status":
 		fmt.Println(style.StyleYellow("  status ---{{KEY}}"))

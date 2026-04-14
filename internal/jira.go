@@ -57,6 +57,7 @@ func performRequest(req *http.Request, expectedStatus int, target interface{}) e
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
+	fmt.Printf("%s", body)
 	if resp.StatusCode != expectedStatus {
 		return fmt.Errorf(style.StyleRed("Jira Error (%d): %s"), resp.StatusCode, string(body))
 	}
@@ -167,7 +168,7 @@ func FetchComments(issueKey string) {
 
 	fmt.Printf(style.StyleBold("\n--- Comments for %s (%d) ---\n"), issueKey, apiData.Total)
 	for _, c := range apiData.Comments {
-		commentText := strings.TrimSpace(models.ExtractPlainText(c.Body))
+		commentText := strings.TrimSpace(models.ParseADF(c.Body))
 		statusTag := ""
 		if c.Created != c.Updated {
 			statusTag = style.StyleYellow("[edited at " + c.Updated + "]")
@@ -183,7 +184,6 @@ func AddCommentToJira(issueKey string, commentText string) {
 	payload := models.AddCommentRequest{
 		Body: models.MarkdownToADF(commentText),
 	}
-	fmt.Printf("payload is %v", payload)
 
 	req, _ := newRequest("POST", apiURL(path), payload)
 	if err := performRequest(req, http.StatusCreated, nil); err != nil {
