@@ -71,7 +71,7 @@ go build -o odin
 - [X] Adding create issue command
 - [ ] Adding changeEstimation command
 - [X] Adding ability of mentioning people in comments
-- [ ] Bug fix about the task item adition in markup editor
+- [X] Bug fix about the task item adition in markup editor
 
 ## Contributing
 This is an open-source project! If you have ideas for new enterprise integrations (Slack, GitHub, ADO), feel free to open an issue or a PR.
