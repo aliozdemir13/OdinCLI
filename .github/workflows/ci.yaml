@@ -19,9 +19,9 @@ jobs:
         with:
           go-version: '1.25.6'
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: v2.11.4
+          version: latest 
 
   test:
     name: Unit Tests & Coverage
@@ -40,10 +40,14 @@ jobs:
       - name: Check Coverage Threshold
         run: |
           THRESHOLD=90
+          # We use awk to handle the decimal comparison safely
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
           echo "Total coverage: $COVERAGE%"
-          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
-            echo "Error: Coverage is below $THRESHOLD%"
+          
+          # Stable way to compare floats in shell
+          VALID=$(echo "$COVERAGE >= $THRESHOLD" | bc -l)
+          if [ "$VALID" -eq 0 ]; then
+            echo "Error: Coverage is $COVERAGE%, which is below the $THRESHOLD% threshold."
             exit 1
           fi
       - name: Report Coverage

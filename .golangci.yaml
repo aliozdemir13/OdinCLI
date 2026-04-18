@@ -1,7 +1,19 @@
+run:
+  go: '1.25.6'
+  timeout: 5m
+
 linters:
   enable:
-    - errcheck    # Checks for unhandled errors
-    - govet       # Reports suspicious constructs
-    - unused      # Checks for unused constants, variables, functions and types
-    - staticcheck # Static analysis checks
-    - gosimple    # Linter for specialized simplify code
+    - errcheck
+    - gosimple
+    - govet
+    - staticcheck
+    - unused
+    - typecheck # Crucial for detecting version/dependency issues
+
+issues:
+  # Excluding common false positives in tests if necessary
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
