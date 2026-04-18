@@ -1,4 +1,4 @@
-version: 2
+version: '2'
 
 run:
   go: '1.25'
@@ -14,9 +14,6 @@ linters:
     - ineffassign
     - misspell
     - revive
-
-issues:
-  # Excluding common false positives in tests if necessary
   exclude-rules:
     - path: _test\.go
       linters:
