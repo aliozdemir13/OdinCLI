@@ -28,28 +28,30 @@ type JiraResponse struct {
 type Issues struct {
 	Key    string `json:"key"`
 	Id     string `json:"id"`
-	Fields struct {
-		Summary           string          `json:"summary"`
-		Description       JiraDescription `json:"description"`
-		ParsedDescription string
-		IssueType         struct {
-			Name string `json:"name"`
-		} `json:"issuetype"`
-		Priority struct {
-			Name string `json:"name"`
-		} `json:"priority"`
-		Status struct {
-			Name           string `json:"name"`
-			StatusCategory struct {
-				Name      string `json:"name"`
-				ColorName string `json:"colorName"`
-			} `json:"statusCategory"`
-		} `json:"status"`
-		Assignee struct {
-			Name         string `json:"displayName"`
-			EmailAddress string `json:"emailAddress"`
-		} `json:"assignee"`
-	} `json:"fields"`
+	Fields Fields `json:"fields"`
+}
+
+type Fields struct {
+	Summary           string          `json:"summary"`
+	Description       JiraDescription `json:"description"`
+	ParsedDescription string
+	IssueType         struct {
+		Name string `json:"name"`
+	} `json:"issuetype"`
+	Priority struct {
+		Name string `json:"name"`
+	} `json:"priority"`
+	Status struct {
+		Name           string `json:"name"`
+		StatusCategory struct {
+			Name      string `json:"name"`
+			ColorName string `json:"colorName"`
+		} `json:"statusCategory"`
+	} `json:"status"`
+	Assignee struct {
+		Name         string `json:"displayName"`
+		EmailAddress string `json:"emailAddress"`
+	} `json:"assignee"`
 }
 
 type DescriptionNode struct {
