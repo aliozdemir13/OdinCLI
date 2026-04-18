@@ -9,7 +9,7 @@ import (
 	"github.com/aliozdemir13/odincli/internal/style"
 )
 
-// Properly parse the ADF format to markdown for better readability
+// ParseADF parses the ADF format to markdown for better readability
 func ParseADF(desc JiraDescription) string {
 	var builder strings.Builder
 	for _, node := range desc.Content {
@@ -18,7 +18,7 @@ func ParseADF(desc JiraDescription) string {
 	return builder.String()
 }
 
-// Recursively identify the node types and depths for rendering
+// walkNodes recursively identify the node types and depths for rendering
 func walkNodes(node DescriptionNode, depth int) string {
 	var b strings.Builder
 
@@ -114,6 +114,7 @@ func walkNodes(node DescriptionNode, depth int) string {
 	return b.String()
 }
 
+// applyMarks adds the markup styling
 func applyMarks(text string, marks []ADFMark) string {
 	result := text
 	for _, m := range marks {
@@ -137,6 +138,7 @@ func applyMarks(text string, marks []ADFMark) string {
 	return result
 }
 
+// stylePanel provides jira like panel styling
 func stylePanel(pType string, content string) string {
 	// Trim trailing newlines from content to avoid huge gaps
 	content = strings.TrimSpace(content)
@@ -157,6 +159,7 @@ func stylePanel(pType string, content string) string {
 	}
 }
 
+// parseTable generates markup table from ADF format
 func parseTable(node DescriptionNode) string {
 	if len(node.Content) == 0 {
 		return ""
@@ -226,6 +229,7 @@ func visualLength(s string) int {
 	return len(plain)
 }
 
+// MarkdownToADF converts written markup text to jira accepted ADF format
 func MarkdownToADF(input string) JiraDescription {
 	lines := strings.Split(input, "\n")
 	var rootContent []DescriptionNode

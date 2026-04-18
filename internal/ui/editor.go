@@ -1,3 +1,4 @@
+// Package provides markup text editor module
 package ui
 
 import (
@@ -11,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// EditorModel is the data structure used for the markup editor
 type EditorModel struct {
 	Textarea textarea.Model
 	Content  string
@@ -22,6 +24,7 @@ type EditorModel struct {
 	ghostText   string          // The "dimmed" part of the name
 }
 
+// InitialModel returns the default state for the editor UI.
 func InitialModel() EditorModel {
 	ti := textarea.New()
 	ti.Placeholder = "Write your comment... (Use Markdown!)\nCtrl+S to save, Ctrl+C to cancel"
@@ -34,10 +37,12 @@ func InitialModel() EditorModel {
 	}
 }
 
+// Init itializes the editor UI.
 func (m EditorModel) Init() tea.Cmd {
 	return textarea.Blink
 }
 
+// Update handles the text changes in the editor
 func (m EditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -104,7 +109,7 @@ func (m *EditorModel) calculateGhostText() {
 }
 
 func (m *EditorModel) insertMention() {
-	mentionTag := fmt.Sprintf("[[%s|%s]] ", m.suggestion.AccountId, m.suggestion.DisplayName)
+	mentionTag := fmt.Sprintf("[[%s|%s]] ", m.suggestion.AccountID, m.suggestion.DisplayName)
 
 	rewindLength := len(m.searchQuery) + 1
 
@@ -135,6 +140,7 @@ func (m EditorModel) lookupUser(q string) tea.Cmd {
 	}
 }
 
+// View handles text suggestions
 func (m EditorModel) View() string {
 	view := fmt.Sprintf(
 		"\n%s\n\n%s",

@@ -14,3 +14,8 @@ linters:
     - ineffassign
     - misspell
     - revive
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          -revive

@@ -54,7 +54,7 @@ func performRequest(req *http.Request, expectedStatus int, target interface{}) e
 	if err != nil {
 		return fmt.Errorf(style.StyleRed("Network Error: %v"), err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != expectedStatus {
@@ -68,6 +68,7 @@ func performRequest(req *http.Request, expectedStatus int, target interface{}) e
 	return nil
 }
 
+// FetchIssues pulls the issues from jira cloud
 func FetchIssues(jql string) {
 	if CurrentInstance.BaseURL == "" {
 		fmt.Println(style.StyleRed("Error: No instance selected. Use 'pull ---{{ProjectKey}}' first."))
@@ -155,6 +156,7 @@ func FetchIssues(jql string) {
 	fmt.Printf("\n"+style.StyleGreen("Successfully pulled %d issues.")+"\n", issueCount)
 }
 
+// FetchComments pulls the comments from jira cloud
 func FetchComments(issueKey string) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/comment", issueKey)
 	req, _ := newRequest("GET", apiURL(path), nil)
@@ -178,6 +180,7 @@ func FetchComments(issueKey string) {
 	}
 }
 
+// AddCommentToJira creates a comment in the given issue key
 func AddCommentToJira(issueKey string, commentText string) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/comment", issueKey)
 	payload := models.AddCommentRequest{
@@ -192,6 +195,7 @@ func AddCommentToJira(issueKey string, commentText string) {
 	fmt.Printf(style.StyleGreen("✔ Comment added successfully to %s\n"), issueKey)
 }
 
+// GetAvailableTransitions pulls the transitions (statuses) from jira cloud
 func GetAvailableTransitions(issueKey string) ([]models.Transition, error) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/transitions", issueKey)
 	req, _ := newRequest("GET", apiURL(path), nil)
@@ -201,6 +205,7 @@ func GetAvailableTransitions(issueKey string) ([]models.Transition, error) {
 	return data.Transitions, err
 }
 
+// PerformTransition updates the status of the given issue key
 func PerformTransition(issueKey string, transitionId string) error {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/transitions", issueKey)
 	payload := map[string]interface{}{
@@ -211,6 +216,7 @@ func PerformTransition(issueKey string, transitionId string) error {
 	return performRequest(req, http.StatusNoContent, nil)
 }
 
+// SearchUsers searches users from jira cloud
 func SearchUsers(query string) ([]models.JiraUser, error) {
 	path := fmt.Sprintf("/rest/api/3/user/search?query=%s&maxResults=5", url.QueryEscape(query))
 	req, _ := newRequest("GET", apiURL(path), nil)
@@ -220,9 +226,10 @@ func SearchUsers(query string) ([]models.JiraUser, error) {
 	return users, err
 }
 
+// AssignIssue assigns to the given user
 func AssignIssue(issueKey string, accountId string) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/assignee", issueKey)
-	req, _ := newRequest("PUT", apiURL(path), models.AssigneePayload{AccountId: accountId})
+	req, _ := newRequest("PUT", apiURL(path), models.AssigneePayload{AccountID: accountId})
 
 	if err := performRequest(req, http.StatusNoContent, nil); err != nil {
 		fmt.Println(err)
@@ -231,6 +238,7 @@ func AssignIssue(issueKey string, accountId string) {
 	fmt.Printf(style.StyleGreen("✔ %s assigned successfully.\n"), issueKey)
 }
 
+// FetchEpicChildren pulls the issues related to given epic
 func FetchEpicChildren(epicKey string) {
 	// JQL to find all items belonging to this Epic
 	jql := fmt.Sprintf("parent = %s", epicKey)
@@ -291,6 +299,7 @@ func FetchEpicChildren(epicKey string) {
 	style.CreateTable(table.Row{"TYPE", "KEY", "SUMMARY", "PRIORITY", "STATUS", "ASSIGNEE"}, tableBody, nil)
 }
 
+// AssignInteractive handles finding the user to get the issue assigned to and call the api via AssignIssue
 func AssignInteractive(issueKey string) {
 	fmt.Print(style.StyleBold("Search user to assign: "))
 	scanner := bufio.NewScanner(os.Stdin)
@@ -319,7 +328,7 @@ func AssignInteractive(issueKey string) {
 	fmt.Scanln(&confirm)
 
 	if strings.ToLower(confirm) == "y" {
-		AssignIssue(issueKey, bestMatch.AccountId)
+		AssignIssue(issueKey, bestMatch.AccountID)
 	} else if len(users) > 1 {
 		fmt.Println(style.StyleBold("\nOther matches:"))
 		for i, u := range users {
@@ -329,19 +338,22 @@ func AssignInteractive(issueKey string) {
 		var choice int
 		fmt.Scanln(&choice)
 		if choice > 0 && choice <= len(users) {
-			AssignIssue(issueKey, users[choice-1].AccountId)
+			AssignIssue(issueKey, users[choice-1].AccountID)
 		}
 	}
 }
 
-func CreateIssueInJira(payload models.CreateIssueRequest, effort string) {
+// CreateIssueInJira creates the issue record in jira cloud
+func CreateIssueInJira(payload models.CreateIssueRequest, effort string) error {
 	path := "/rest/api/3/issue"
 
 	// convert the struct to a Map so we can add the Custom Field for Effort or any other needed
 	// because "Story Points" for instance isn't a standard field name.
 	body, _ := json.Marshal(payload)
 	var finalMap map[string]interface{}
-	json.Unmarshal(body, &finalMap)
+	if err := json.Unmarshal(body, &finalMap); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
+	}
 
 	// Add Story Points if provided
 	// TODO: Move custom field to config.json
@@ -359,8 +371,9 @@ func CreateIssueInJira(payload models.CreateIssueRequest, effort string) {
 
 	if err := performRequest(req, http.StatusCreated, &result); err != nil {
 		fmt.Println(err)
-		return
+		return nil
 	}
 
 	fmt.Printf(style.StyleGreen("✔ Issue created successfully: %s\n"), result.Key)
+	return nil
 }

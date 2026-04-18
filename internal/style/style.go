@@ -1,3 +1,4 @@
+// style package provides styling to the application
 package style
 
 import (
@@ -8,6 +9,7 @@ import (
 )
 
 const (
+	// Reset  resets style decoration
 	Reset  = "\033[0m"
 	Dim    = "\033[2m"
 	Red    = "\033[31m"
@@ -20,6 +22,7 @@ const (
 	Bold   = "\033[1m"
 )
 
+// PrintHeader returns the logo and the command list for guidance
 func PrintHeader() {
 	logo := `
   ██████╗  ██████╗  ██╗ ███╗   ██╗
@@ -33,6 +36,7 @@ func PrintHeader() {
 	PrintCommandList()
 }
 
+// PrintCommandList returns the command list for guidance
 func PrintCommandList() {
 	fmt.Println(StyleDim("\nUsage: pull ---{{ProjectKey}}"))
 	fmt.Println(StyleDim("Usage: details ---{{IssueKey}}"))
@@ -48,15 +52,32 @@ func PrintCommandList() {
 	fmt.Println(StyleDim("Usage: help"))
 }
 
-func StyleDim(t string) string    { return Dim + t + Reset }
-func StyleGreen(t string) string  { return Green + t + Reset }
+// StyleDim decorates text to dim it
+func StyleDim(t string) string { return Dim + t + Reset }
+
+// StyleGreen decorates text with green color
+func StyleGreen(t string) string { return Green + t + Reset }
+
+// StyleYellow decorates text with yellow color
 func StyleYellow(t string) string { return Yellow + t + Reset }
-func StyleBlue(t string) string   { return Blue + t + Reset }
-func StyleRed(t string) string    { return Red + t + Reset }
+
+// StyleBlue decorates text with blue color
+func StyleBlue(t string) string { return Blue + t + Reset }
+
+// StyleRed decorates text with red color
+func StyleRed(t string) string { return Red + t + Reset }
+
+// StyleIndigo decorates text with indigo color
 func StyleIndigo(t string) string { return Indigo + t + Reset }
-func StyleCyan(t string) string   { return Cyan + t + Reset }
-func StyleBold(t string) string   { return Bold + t + Reset }
-func StyleGray(t string) string   { return Gray + t + Reset }
+
+// StyleCyan decorates text with cyan color
+func StyleCyan(t string) string { return Cyan + t + Reset }
+
+// StyleBold decorates text to make it bold
+func StyleBold(t string) string { return Bold + t + Reset }
+
+// StyleGray decorates text with gray color
+func StyleGray(t string) string { return Gray + t + Reset }
 
 // CustomColor maps Jira Hex colors to basic Terminal colors
 func CustomColor(text string, hex string) string {
@@ -70,6 +91,7 @@ func CustomColor(text string, hex string) string {
 	}
 }
 
+// GetPriorityIcon returns icons for the jira ticket priorities
 func GetPriorityIcon(priority string) string {
 	switch priority {
 	case "Highest":
@@ -87,6 +109,7 @@ func GetPriorityIcon(priority string) string {
 	}
 }
 
+// CreateTable returns prettify table view of the information
 func CreateTable(header table.Row, body []table.Row, columnConfig []table.ColumnConfig) {
 	// Create the Table Writer
 	t := table.NewWriter()

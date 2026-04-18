@@ -269,7 +269,7 @@ func handleStatus(parts []string) bool {
 	}
 
 	selected := transitions[idx-1]
-	err = internal.PerformTransition(issueKey, selected.Id)
+	err = internal.PerformTransition(issueKey, selected.ID)
 	if err != nil {
 		fmt.Println(style.StyleRed("Update failed: ") + err.Error())
 	} else {
@@ -351,7 +351,7 @@ func handleCreateIssue() bool {
 				Value(&summary).
 				Validate(func(str string) error {
 					if str == "" {
-						return fmt.Errorf("Summary is required")
+						return fmt.Errorf("summary is required")
 					}
 					return nil
 				}),
