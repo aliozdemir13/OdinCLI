@@ -23,6 +23,9 @@ func TestStyleWrappers(t *testing.T) {
 		{"Yellow", "test", Yellow + "test" + Reset, StyleYellow},
 		{"Red", "test", Red + "test" + Reset, StyleRed},
 		{"Bold", "test", Bold + "test" + Reset, StyleBold},
+		{"Indigo", "test", Indigo + "test" + Reset, StyleIndigo},
+		{"Cyan", "test", Cyan + "test" + Reset, StyleCyan},
+		{"Gray", "test", Gray + "test" + Reset, StyleGray},
 	}
 
 	for _, tt := range tests {
@@ -62,7 +65,9 @@ func TestGetPriorityIcon(t *testing.T) {
 		contains string // Check if result contains specific arrow or color
 	}{
 		{"Highest", "▲▲"},
+		{"High", "▲"},
 		{"Medium", "="},
+		{"Low", "▼"},
 		{"Lowest", "▼▼"},
 		{"Unknown", "-"},
 	}
@@ -95,6 +100,26 @@ func captureOutput(f func()) string {
 func TestPrintCommandList(t *testing.T) {
 	output := captureOutput(func() {
 		PrintCommandList()
+	})
+
+	expectedCommands := []string{
+		"pull ---{{ProjectKey}}",
+		"details ---{{IssueKey}}",
+		"exit",
+		"help",
+	}
+
+	for _, cmd := range expectedCommands {
+		if !strings.Contains(output, cmd) {
+			t.Errorf("expected output to contain command %q", cmd)
+		}
+	}
+}
+
+// TestPrintHeader checks if the command list prints expected usage strings
+func TestPrintHeader(t *testing.T) {
+	output := captureOutput(func() {
+		PrintHeader()
 	})
 
 	expectedCommands := []string{
