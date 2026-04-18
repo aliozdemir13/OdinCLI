@@ -50,8 +50,3 @@ jobs:
             echo "Error: Coverage is $COVERAGE%, which is below the $THRESHOLD% threshold."
             exit 1
           fi
-      - name: Report Coverage
-        uses: funny-falcon/go-test-report-action@v2
-        if: always()
-        with:
-          coverprofile: coverage.out
