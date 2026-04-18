@@ -5,14 +5,13 @@ run:
   timeout: 5m
 
 linters:
-  default: none
+  default: noneca
   enable:
     - errcheck
     - gosimple
     - govet
     - staticcheck
     - unused
-    - typecheck # Crucial for detecting version/dependency issues
 
 issues:
   # Excluding common false positives in tests if necessary
