@@ -1,4 +1,4 @@
-// style package provides styling to the application
+// Package style provides styling to the application
 package style
 
 import (
@@ -9,17 +9,26 @@ import (
 )
 
 const (
-	// Reset  resets style decoration
-	Reset  = "\033[0m"
-	Dim    = "\033[2m"
-	Red    = "\033[31m"
-	Green  = "\033[32m"
-	Yellow = "\033[33m"
-	Blue   = "\033[34m"
-	Cyan   = "\033[36m"
-	Gray   = "\033[90m"
-	Indigo = "\033[38;5;141m"
-	Bold   = "\033[1m"
+	// ColorReset resets style decoration
+	ColorReset = "\033[0m"
+	// ColorDim dims the text
+	ColorDim = "\033[2m"
+	// ColorRed colors text as red
+	ColorRed = "\033[31m"
+	// ColorGreen colors text as green
+	ColorGreen = "\033[32m"
+	// ColorYellow colors text as yellow
+	ColorYellow = "\033[33m"
+	// ColorBlue colors text as blue
+	ColorBlue = "\033[34m"
+	// ColorCyan colors text as cyan
+	ColorCyan = "\033[36m"
+	// ColorGray colors text as gray
+	ColorGray = "\033[90m"
+	// ColorIndigo colors text as indigo
+	ColorIndigo = "\033[38;5;141m"
+	// TextBold styles text as bold
+	TextBold = "\033[1m"
 )
 
 // PrintHeader returns the logo and the command list for guidance
@@ -31,61 +40,61 @@ func PrintHeader() {
  ██║   ██║ ██║  ██║ ██║ ██║╚██╗██║
  ╚██████╔╝ ██████╔╝ ██║ ██║ ╚████║
   ╚═════╝  ╚═════╝  ╚═╝ ╚═╝  ╚═══╝`
-	fmt.Println(Cyan + logo + Reset)
+	fmt.Println(ColorCyan + logo + ColorReset)
 
 	PrintCommandList()
 }
 
 // PrintCommandList returns the command list for guidance
 func PrintCommandList() {
-	fmt.Println(StyleDim("\nUsage: pull ---{{ProjectKey}}"))
-	fmt.Println(StyleDim("Usage: details ---{{IssueKey}}"))
-	fmt.Println(StyleDim("Usage: search ---{{IssueKey}}"))
-	fmt.Println(StyleDim("Usage: filter ---status {{Status}}"))
-	fmt.Println(StyleDim("Usage: filter ---prio {{Priority}}"))
-	fmt.Println(StyleDim("Usage: filter ---myIssues"))
-	fmt.Println(StyleDim("Usage: filter ---currentSprint"))
-	fmt.Println(StyleDim("Usage: filter ---backlog"))
-	fmt.Println(StyleDim("Usage: filter ---epics"))
-	fmt.Println(StyleDim("Usage: addComment ---{{IssueKey}}"))
-	fmt.Println(StyleDim("Usage: exit"))
-	fmt.Println(StyleDim("Usage: help"))
+	fmt.Println(Dim("\nUsage: pull ---{{ProjectKey}}"))
+	fmt.Println(Dim("Usage: details ---{{IssueKey}}"))
+	fmt.Println(Dim("Usage: search ---{{IssueKey}}"))
+	fmt.Println(Dim("Usage: filter ---status {{Status}}"))
+	fmt.Println(Dim("Usage: filter ---prio {{Priority}}"))
+	fmt.Println(Dim("Usage: filter ---myIssues"))
+	fmt.Println(Dim("Usage: filter ---currentSprint"))
+	fmt.Println(Dim("Usage: filter ---backlog"))
+	fmt.Println(Dim("Usage: filter ---epics"))
+	fmt.Println(Dim("Usage: addComment ---{{IssueKey}}"))
+	fmt.Println(Dim("Usage: exit"))
+	fmt.Println(Dim("Usage: help"))
 }
 
-// StyleDim decorates text to dim it
-func StyleDim(t string) string { return Dim + t + Reset }
+// Dim decorates text to dim it
+func Dim(t string) string { return ColorDim + t + ColorReset }
 
-// StyleGreen decorates text with green color
-func StyleGreen(t string) string { return Green + t + Reset }
+// Green decorates text with green color
+func Green(t string) string { return ColorGreen + t + ColorReset }
 
-// StyleYellow decorates text with yellow color
-func StyleYellow(t string) string { return Yellow + t + Reset }
+// Yellow decorates text with yellow color
+func Yellow(t string) string { return ColorYellow + t + ColorReset }
 
-// StyleBlue decorates text with blue color
-func StyleBlue(t string) string { return Blue + t + Reset }
+// Blue decorates text with blue color
+func Blue(t string) string { return ColorBlue + t + ColorReset }
 
-// StyleRed decorates text with red color
-func StyleRed(t string) string { return Red + t + Reset }
+// Red decorates text with red color
+func Red(t string) string { return ColorRed + t + ColorReset }
 
-// StyleIndigo decorates text with indigo color
-func StyleIndigo(t string) string { return Indigo + t + Reset }
+// Indigo decorates text with indigo color
+func Indigo(t string) string { return ColorIndigo + t + ColorReset }
 
-// StyleCyan decorates text with cyan color
-func StyleCyan(t string) string { return Cyan + t + Reset }
+// Cyan decorates text with cyan color
+func Cyan(t string) string { return ColorCyan + t + ColorReset }
 
-// StyleBold decorates text to make it bold
-func StyleBold(t string) string { return Bold + t + Reset }
+// Bold decorates text to make it bold
+func Bold(t string) string { return TextBold + t + ColorReset }
 
-// StyleGray decorates text with gray color
-func StyleGray(t string) string { return Gray + t + Reset }
+// Gray decorates text with gray color
+func Gray(t string) string { return ColorGray + t + ColorReset }
 
 // CustomColor maps Jira Hex colors to basic Terminal colors
 func CustomColor(text string, hex string) string {
 	switch hex {
 	case "#bf2600":
-		return StyleRed(text) // Reddish
+		return Red(text) // Reddish
 	case "#0747a6":
-		return StyleBlue(text) // Bluish
+		return Blue(text) // Bluish
 	default:
 		return text
 	}
@@ -95,17 +104,50 @@ func CustomColor(text string, hex string) string {
 func GetPriorityIcon(priority string) string {
 	switch priority {
 	case "Highest":
-		return Red + Bold + "  [▲▲] " + Reset // Double up
+		return ColorRed + TextBold + "  [▲▲] " + ColorReset // Double up
 	case "High":
-		return Red + "  [▲]  " + Reset // Single up
+		return ColorRed + "  [▲]  " + ColorReset // Single up
 	case "Medium":
-		return Yellow + "  [=]  " + Reset // Equal / Neutral
+		return ColorYellow + "  [=]  " + ColorReset // Equal / Neutral
 	case "Low":
-		return Blue + "  [▼]  " + Reset // Single down
+		return ColorBlue + "  [▼]  " + ColorReset // Single down
 	case "Lowest":
-		return Cyan + "  [▼▼] " + Reset // Double down
+		return ColorCyan + "  [▼▼] " + ColorReset // Double down
 	default:
-		return Dim + "  [-]  " + Reset // Unknown
+		return ColorDim + "  [-]  " + ColorReset // Unknown
+	}
+}
+
+// PrintCommandUsage is the global handler of the help command display
+func PrintCommandUsage(name string) {
+	fmt.Println("Usage:")
+	switch name {
+	case "filter":
+		fmt.Println(Yellow("  filter ---status In Progress"))
+		fmt.Println(Yellow("  filter ---prio High"))
+		fmt.Println(Yellow("  filter ---myIssues"))
+		fmt.Println(Yellow("  filter ---currentSprint"))
+		fmt.Println(Yellow("  filter ---backlog"))
+		fmt.Println(Yellow("  filter ---epics"))
+
+	case "pull":
+		fmt.Println(Yellow("  pull ---{{ProjectKey}}"))
+
+	case "details":
+		fmt.Println(Yellow("  details ---{{Key}}"))
+		fmt.Println(Yellow("  details ---epic {{Key}}"))
+
+	case "addComment":
+		fmt.Println(Yellow("  addComment {{Key}}"))
+
+	case "status":
+		fmt.Println(Yellow("  status ---{{KEY}}"))
+
+	case "assign":
+		fmt.Println(Yellow("  assign ---{{KEY}}"))
+
+	case "search":
+		fmt.Println(Yellow("  search ---\"your keyword or phrase\""))
 	}
 }
 

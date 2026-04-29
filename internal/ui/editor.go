@@ -1,4 +1,4 @@
-// Package provides markup text editor module
+// Package ui provides markup text editor module
 package ui
 
 import (
@@ -144,13 +144,13 @@ func (m EditorModel) lookupUser(q string) tea.Cmd {
 func (m EditorModel) View() string {
 	view := fmt.Sprintf(
 		"\n%s\n\n%s",
-		style.StyleIndigo(" Odin Markup Editor "),
+		style.Indigo(" Odin Markup Editor "),
 		m.Textarea.View(),
 	)
 
 	// Display Ghost Text Suggestion in the footer
 	if m.ghostText != "" {
-		view += style.StyleDim("\n  Suggestion: " + m.searchQuery + style.StyleBold(m.ghostText) + " (Press Tab to complete)")
+		view += style.Dim("\n  Suggestion: " + m.searchQuery + style.Bold(m.ghostText) + " (Press Tab to complete)")
 	}
 
 	return view + "\n\n"

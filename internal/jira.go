@@ -1,3 +1,4 @@
+// Package internal handles the jira service logic
 package internal
 
 import (
@@ -17,9 +18,12 @@ import (
 )
 
 var (
+	// CurrentInstance defines the attributes of the instance in the running context
 	CurrentInstance models.JiraInstance
-	LastEntries     []models.Issues
-	EntriesCache    map[string]models.Issues
+	// LastEntries is the data struct used in the fetch issues function to fetch and stored paginated response
+	LastEntries []models.Issues
+	// EntriesCache is a local cache supporting search and epic-issue relationship
+	EntriesCache map[string]models.Issues
 )
 
 // apiURL combines the base URL with the specific API path
@@ -52,13 +56,13 @@ func newRequest(method, path string, bodyData interface{}) (*http.Request, error
 func performRequest(req *http.Request, expectedStatus int, target interface{}) error {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf(style.StyleRed("Network Error: %v"), err)
+		return fmt.Errorf(style.Red("Network Error: %v"), err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != expectedStatus {
-		return fmt.Errorf(style.StyleRed("Jira Error (%d): %s"), resp.StatusCode, string(body))
+		return fmt.Errorf(style.Red("Jira Error (%d): %s"), resp.StatusCode, string(body))
 	}
 
 	if target != nil {
@@ -71,7 +75,7 @@ func performRequest(req *http.Request, expectedStatus int, target interface{}) e
 // FetchIssues pulls the issues from jira cloud
 func FetchIssues(jql string) {
 	if CurrentInstance.BaseURL == "" {
-		fmt.Println(style.StyleRed("Error: No instance selected. Use 'pull ---{{ProjectKey}}' first."))
+		fmt.Println(style.Red("Error: No instance selected. Use 'pull ---{{ProjectKey}}' first."))
 		return
 	}
 
@@ -109,7 +113,7 @@ func FetchIssues(jql string) {
 		}
 
 		if len(apiData.Issues) == 0 && issueCount == 0 {
-			fmt.Println(style.StyleYellow("No issues found for this query."))
+			fmt.Println(style.Yellow("No issues found for this query."))
 			return
 		}
 
@@ -120,20 +124,20 @@ func FetchIssues(jql string) {
 			// Prepare Styling
 			prioIcon := style.GetPriorityIcon(issue.Fields.Priority.Name)
 			issueType := issue.Fields.IssueType.Name
-			issueKey := style.StyleGreen(issue.Key)
+			issueKey := style.Green(issue.Key)
 			issueSummary := issue.Fields.Summary
-			issueStatus := style.StyleYellow(issue.Fields.Status.Name)
+			issueStatus := style.Yellow(issue.Fields.Status.Name)
 
 			assignee := issue.Fields.Assignee.Name
 			if assignee == "" {
 				assignee = "Unassigned"
 			}
-			assignee = style.StyleDim(assignee)
+			assignee = style.Dim(assignee)
 
 			// Apply Epic styling logic
 			if issueType == "Epic" {
-				issueKey = style.StyleIndigo(issue.Key)
-				issueSummary = style.StyleIndigo(style.StyleBold(issueSummary))
+				issueKey = style.Indigo(issue.Key)
+				issueSummary = style.Indigo(style.Bold(issueSummary))
 			}
 
 			// 2. Append Row to Table
@@ -153,7 +157,7 @@ func FetchIssues(jql string) {
 	}
 
 	style.CreateTable(table.Row{"PRIORITY", "TYPE", "KEY", "SUMMARY", "STATUS", "ASSIGNEE"}, tableBody, []table.ColumnConfig{{Name: "SUMMARY", WidthMax: 60}})
-	fmt.Printf("\n"+style.StyleGreen("Successfully pulled %d issues.")+"\n", issueCount)
+	fmt.Printf("\n"+style.Green("Successfully pulled %d issues.")+"\n", issueCount)
 }
 
 // FetchComments pulls the comments from jira cloud
@@ -167,16 +171,16 @@ func FetchComments(issueKey string) {
 		return
 	}
 
-	fmt.Printf(style.StyleBold("\n--- Comments for %s (%d) ---\n"), issueKey, apiData.Total)
+	fmt.Printf(style.Bold("\n--- Comments for %s (%d) ---\n"), issueKey, apiData.Total)
 	for _, c := range apiData.Comments {
 		commentText := strings.TrimSpace(models.ParseADF(c.Body))
 		statusTag := ""
 		if c.Created != c.Updated {
-			statusTag = style.StyleYellow("[edited at " + c.Updated + "]")
+			statusTag = style.Yellow("[edited at " + c.Updated + "]")
 		}
 
-		fmt.Printf("%s | %s %s\n", style.StyleGreen(c.Author.DisplayName), style.StyleDim(c.Created), statusTag)
-		fmt.Printf("%s\n%s\n", commentText, style.StyleDim(strings.Repeat("-", 40)))
+		fmt.Printf("%s | %s %s\n", style.Green(c.Author.DisplayName), style.Dim(c.Created), statusTag)
+		fmt.Printf("%s\n%s\n", commentText, style.Dim(strings.Repeat("-", 40)))
 	}
 }
 
@@ -192,7 +196,7 @@ func AddCommentToJira(issueKey string, commentText string) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf(style.StyleGreen("✔ Comment added successfully to %s\n"), issueKey)
+	fmt.Printf(style.Green("✔ Comment added successfully to %s\n"), issueKey)
 }
 
 // GetAvailableTransitions pulls the transitions (statuses) from jira cloud
@@ -206,10 +210,10 @@ func GetAvailableTransitions(issueKey string) ([]models.Transition, error) {
 }
 
 // PerformTransition updates the status of the given issue key
-func PerformTransition(issueKey string, transitionId string) error {
+func PerformTransition(issueKey string, transitionID string) error {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/transitions", issueKey)
 	payload := map[string]interface{}{
-		"transition": map[string]string{"id": transitionId},
+		"transition": map[string]string{"id": transitionID},
 	}
 
 	req, _ := newRequest("POST", apiURL(path), payload)
@@ -227,15 +231,15 @@ func SearchUsers(query string) ([]models.JiraUser, error) {
 }
 
 // AssignIssue assigns to the given user
-func AssignIssue(issueKey string, accountId string) {
+func AssignIssue(issueKey string, accountID string) {
 	path := fmt.Sprintf("/rest/api/3/issue/%s/assignee", issueKey)
-	req, _ := newRequest("PUT", apiURL(path), models.AssigneePayload{AccountID: accountId})
+	req, _ := newRequest("PUT", apiURL(path), models.AssigneePayload{AccountID: accountID})
 
 	if err := performRequest(req, http.StatusNoContent, nil); err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf(style.StyleGreen("✔ %s assigned successfully.\n"), issueKey)
+	fmt.Printf(style.Green("✔ %s assigned successfully.\n"), issueKey)
 }
 
 // FetchEpicChildren pulls the issues related to given epic
@@ -255,12 +259,12 @@ func FetchEpicChildren(epicKey string) {
 	}
 
 	if len(apiData.Issues) == 0 {
-		fmt.Println(style.StyleYellow("No child issues found for this epic."))
+		fmt.Println(style.Yellow("No child issues found for this epic."))
 		return
 	}
 
-	fmt.Printf(style.StyleBold("\nIssues in Epic %s (%d items):\n\n"),
-		style.StyleIndigo("["+epicKey+"] "+EntriesCache[epicKey].Fields.Summary), len(apiData.Issues))
+	fmt.Printf(style.Bold("\nIssues in Epic %s (%d items):\n\n"),
+		style.Indigo("["+epicKey+"] "+EntriesCache[epicKey].Fields.Summary), len(apiData.Issues))
 
 	// prepare table data
 	var tableBody []table.Row
@@ -268,7 +272,7 @@ func FetchEpicChildren(epicKey string) {
 	for _, issue := range apiData.Issues {
 		// Prepare data
 		issueType := issue.Fields.IssueType.Name
-		key := style.StyleGreen(issue.Key)
+		key := style.Green(issue.Key)
 
 		summary := issue.Fields.Summary
 		// The library handles wrapping, but if you want strict truncation:
@@ -277,13 +281,13 @@ func FetchEpicChildren(epicKey string) {
 		}
 
 		prio := style.GetPriorityIcon(issue.Fields.Priority.Name)
-		status := style.StyleYellow(issue.Fields.Status.Name)
+		status := style.Yellow(issue.Fields.Status.Name)
 
 		assignee := issue.Fields.Assignee.Name
 		if assignee == "" {
 			assignee = "Unassigned"
 		}
-		assignee = style.StyleDim(assignee)
+		assignee = style.Dim(assignee)
 
 		// Add Row
 		tableBody = append(tableBody, table.Row{
@@ -301,7 +305,7 @@ func FetchEpicChildren(epicKey string) {
 
 // AssignInteractive handles finding the user to get the issue assigned to and call the api via AssignIssue
 func AssignInteractive(issueKey string) {
-	fmt.Print(style.StyleBold("Search user to assign: "))
+	fmt.Print(style.Bold("Search user to assign: "))
 	scanner := bufio.NewScanner(os.Stdin)
 	if !scanner.Scan() {
 		return
@@ -313,30 +317,30 @@ func AssignInteractive(issueKey string) {
 
 	users, err := SearchUsers(input)
 	if err != nil || len(users) == 0 {
-		fmt.Println(style.StyleRed("No users found matching: " + input))
+		fmt.Println(style.Red("No users found matching: " + input))
 		return
 	}
 
 	bestMatch := users[0]
-	recommendation := style.StyleYellow(bestMatch.DisplayName)
+	recommendation := style.Yellow(bestMatch.DisplayName)
 	if strings.HasPrefix(strings.ToLower(bestMatch.DisplayName), strings.ToLower(input)) {
-		recommendation = bestMatch.DisplayName[:len(input)] + style.StyleDim(bestMatch.DisplayName[len(input):])
+		recommendation = bestMatch.DisplayName[:len(input)] + style.Dim(bestMatch.DisplayName[len(input):])
 	}
 
-	fmt.Printf("Match found: %s. Assign %s? (y/n): ", recommendation, style.StyleGreen(issueKey))
+	fmt.Printf("Match found: %s. Assign %s? (y/n): ", recommendation, style.Green(issueKey))
 	var confirm string
-	fmt.Scanln(&confirm)
+	_, _ = fmt.Scanln(&confirm)
 
 	if strings.ToLower(confirm) == "y" {
 		AssignIssue(issueKey, bestMatch.AccountID)
 	} else if len(users) > 1 {
-		fmt.Println(style.StyleBold("\nOther matches:"))
+		fmt.Println(style.Bold("\nOther matches:"))
 		for i, u := range users {
 			fmt.Printf("%d) %s\n", i+1, u.DisplayName)
 		}
 		fmt.Print("Select number (or 'c' to cancel): ")
 		var choice int
-		fmt.Scanln(&choice)
+		_, _ = fmt.Scanln(&choice)
 		if choice > 0 && choice <= len(users) {
 			AssignIssue(issueKey, users[choice-1].AccountID)
 		}
@@ -374,6 +378,6 @@ func CreateIssueInJira(payload models.CreateIssueRequest, effort string) error {
 		return nil
 	}
 
-	fmt.Printf(style.StyleGreen("✔ Issue created successfully: %s\n"), result.Key)
+	fmt.Printf(style.Green("✔ Issue created successfully: %s\n"), result.Key)
 	return nil
 }

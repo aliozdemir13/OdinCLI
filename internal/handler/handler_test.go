@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"bytes"
@@ -38,7 +38,7 @@ func TestHandlePull(t *testing.T) {
 	t.Run("Valid Project", func(t *testing.T) {
 		parts := []string{"pull", "TEST"}
 		// Note: internal.FetchIssues will likely be called here.
-		success := handlePull(parts, config, "mock-api-key")
+		success := HandlePull(parts, config, "mock-api-key")
 
 		if !success {
 			t.Error("Expected handlePull to return true for valid project")
@@ -52,7 +52,7 @@ func TestHandlePull(t *testing.T) {
 	t.Run("Invalid Project", func(t *testing.T) {
 		parts := []string{"pull", "UNKNOWN"}
 		output := captureStdout(func() {
-			success := handlePull(parts, config, "key")
+			success := HandlePull(parts, config, "key")
 			if success {
 				t.Error("Expected handlePull to return false for unknown project")
 			}
@@ -90,7 +90,7 @@ func TestHandleFilter(t *testing.T) {
 	t.Run("Filter by Status Match", func(t *testing.T) {
 		parts := []string{"filter", "status In Progress"}
 		output := captureStdout(func() {
-			handleFilter(parts)
+			HandleFilter(parts)
 		})
 
 		if !strings.Contains(output, "PROJ-1") {
@@ -101,7 +101,7 @@ func TestHandleFilter(t *testing.T) {
 	t.Run("Filter by Status No Match", func(t *testing.T) {
 		parts := []string{"filter", "status Done"}
 		output := captureStdout(func() {
-			handleFilter(parts)
+			HandleFilter(parts)
 		})
 
 		if !strings.Contains(output, "No matching issues found") {
@@ -141,7 +141,7 @@ func TestHandleDetails(t *testing.T) {
 		parts := []string{"details", "PROJ-1"}
 		output := captureStdout(func() {
 			// This will likely trigger internal.FetchComments(key)
-			handleDetails(parts)
+			HandleDetails(parts)
 		})
 
 		if !strings.Contains(output, "Details Summary") {
@@ -165,7 +165,7 @@ func TestHandleStatus_Cancel(t *testing.T) {
 	// We assume handleStatus will fail or return false because we aren't mocking the API response
 	// for GetAvailableTransitions, but this verifies the 'c' input logic doesn't crash.
 	parts := []string{"status", "PROJ-1"}
-	success := handleStatus(parts)
+	success := HandleStatus(parts)
 
 	if success {
 		t.Error("Expected handleStatus to return false when cancelled with 'c'")

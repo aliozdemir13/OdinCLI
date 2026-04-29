@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -18,14 +19,14 @@ func TestStyleWrappers(t *testing.T) {
 		expected string
 		function func(string) string
 	}{
-		{"Dim", "test", Dim + "test" + Reset, StyleDim},
-		{"Green", "test", Green + "test" + Reset, StyleGreen},
-		{"Yellow", "test", Yellow + "test" + Reset, StyleYellow},
-		{"Red", "test", Red + "test" + Reset, StyleRed},
-		{"Bold", "test", Bold + "test" + Reset, StyleBold},
-		{"Indigo", "test", Indigo + "test" + Reset, StyleIndigo},
-		{"Cyan", "test", Cyan + "test" + Reset, StyleCyan},
-		{"Gray", "test", Gray + "test" + Reset, StyleGray},
+		{"Dim", "test", ColorDim + "test" + ColorReset, Dim},
+		{"Green", "test", ColorGreen + "test" + ColorReset, Green},
+		{"Yellow", "test", ColorYellow + "test" + ColorReset, Yellow},
+		{"Red", "test", ColorRed + "test" + ColorReset, Red},
+		{"Bold", "test", TextBold + "test" + ColorReset, Bold},
+		{"Indigo", "test", ColorIndigo + "test" + ColorReset, Indigo},
+		{"Cyan", "test", ColorCyan + "test" + ColorReset, Cyan},
+		{"Gray", "test", ColorGray + "test" + ColorReset, Gray},
 	}
 
 	for _, tt := range tests {
@@ -45,8 +46,8 @@ func TestCustomColor(t *testing.T) {
 		hex      string
 		expected string
 	}{
-		{"Error", "#bf2600", StyleRed("Error")},
-		{"Info", "#0747a6", StyleBlue("Info")},
+		{"Error", "#bf2600", Red("Error")},
+		{"Info", "#0747a6", Blue("Info")},
 		{"Normal", "#ffffff", "Normal"}, // Default case
 	}
 
@@ -136,12 +137,50 @@ func TestPrintHeader(t *testing.T) {
 	}
 }
 
+// stripANSI removes escape codes like [33m from a string
+func stripANSI(str string) string {
+	const ansi = `\x1b\[[0-9;]*[a-zA-Z]`
+	re := regexp.MustCompile(ansi)
+	return re.ReplaceAllString(str, "")
+}
+
+// TestPrintCommandUsage checks if the command usage prints expected usage strings
+func TestPrintCommandUsage(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"filter", "filter", "filter ---status In Progress"},
+		{"pull", "pull", "pull ---{{ProjectKey}}"},
+		{"details", "details", "details ---{{Key}}"},
+		{"addComment", "addComment", "addComment {{Key}}"},
+		{"status", "status", "status ---{{KEY}}"},
+		{"assign", "assign", "assign ---{{KEY}}"},
+		{"search", "search", "search ---\"your keyword or phrase\""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := captureOutput(func() {
+				PrintCommandUsage(tt.input)
+			})
+
+			cleanOutput := stripANSI(output)
+
+			if !strings.Contains(cleanOutput, tt.expected) {
+				t.Errorf("\nCommand: %s\nExpected to contain: %q\nActual (cleaned): %q", tt.name, tt.expected, cleanOutput)
+			}
+		})
+	}
+}
+
 // TestCreateTable ensures the table function doesn't panic with sample data
 func TestCreateTable(t *testing.T) {
 	header := table.Row{"ID", "Status"}
 	body := []table.Row{
-		{"PROJ-1", StyleGreen("Done")},
-		{"PROJ-2", StyleYellow("In Progress")},
+		{"PROJ-1", Green("Done")},
+		{"PROJ-2", Yellow("In Progress")},
 	}
 
 	// We capture output just to ensure it doesn't crash during rendering

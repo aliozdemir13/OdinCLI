@@ -1,4 +1,4 @@
-// package provides data structures for the application
+// Package models provides data structures for the application
 package models
 
 // JiraInstance is the structure of authenticating in jira cloud
@@ -22,7 +22,7 @@ type JiraResponse struct {
 // Issues is the structure supporting JiraResponse to parse payload
 type Issues struct {
 	Key    string `json:"key"`
-	Id     string `json:"id"`
+	ID     string `json:"id"`
 	Fields Fields `json:"fields"`
 }
 
@@ -59,7 +59,7 @@ type DescriptionNode struct {
 	Marks   []ADFMark         `json:"marks,omitempty"`
 }
 
-// DescriptionNode is the structure for parsing the jira payload to display description of the issues
+// JiraDescription is the structure for parsing the jira payload to display description of the issues
 type JiraDescription struct {
 	Type    string            `json:"type"`
 	Version int               `json:"version"`
