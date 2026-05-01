@@ -28,7 +28,7 @@ Odin uses a unique `---` delimiter to separate the command from its arguments.
 | `filter ---backlog` | **Updates Context:** Fetches the project backlog. |
 | `filter ---myIssues` | Quick-filter to show only issues assigned to you. |
 | `filter ---epics` | Quick-filter to show only Epics. |
-| `create ---{{Key}}` | Opens a markdown editor for generating the issue description. |
+| `create` | Opens a markdown editor for generating the issue description. |
 | `help` | Lists all available commands. |
 | `exit` | Safely closes Odin and clears the session. |
 

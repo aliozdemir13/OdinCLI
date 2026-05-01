@@ -9,7 +9,7 @@ import (
 	"github.com/aliozdemir13/odincli/internal/style"
 )
 
-// Properly parse the ADF format to markdown for better readability
+// ParseADF parses the ADF format to markdown for better readability
 func ParseADF(desc JiraDescription) string {
 	var builder strings.Builder
 	for _, node := range desc.Content {
@@ -18,7 +18,7 @@ func ParseADF(desc JiraDescription) string {
 	return builder.String()
 }
 
-// Recursively identify the node types and depths for rendering
+// walkNodes recursively identify the node types and depths for rendering
 func walkNodes(node DescriptionNode, depth int) string {
 	var b strings.Builder
 
@@ -49,7 +49,7 @@ func walkNodes(node DescriptionNode, depth int) string {
 		state, _ := node.Attrs["state"].(string)
 		for _, child := range node.Content {
 			if state == "DONE" {
-				b.WriteString(style.StyleGreen("[x]") + " " + style.StyleGreen(strings.TrimSpace(walkNodes(child, depth))))
+				b.WriteString(style.Green("[x]") + " " + style.Green(strings.TrimSpace(walkNodes(child, depth))))
 			} else {
 				b.WriteString("[ ]" + " " + strings.TrimSpace(walkNodes(child, depth)))
 			}
@@ -94,14 +94,14 @@ func walkNodes(node DescriptionNode, depth int) string {
 
 	case "mention":
 		if text, ok := node.Attrs["text"].(string); ok {
-			b.WriteString(style.StyleBlue(text))
+			b.WriteString(style.Blue(text))
 		}
 
 	case "inlineCard", "blockCard":
 		// Handles the "Smart Links" in Jira
 		if url, ok := node.Attrs["url"].(string); ok {
 			// Render it blue and underlined (if your style package supports it)
-			b.WriteString(style.StyleCyan(url))
+			b.WriteString(style.Cyan(url))
 		}
 
 	default:
@@ -114,6 +114,7 @@ func walkNodes(node DescriptionNode, depth int) string {
 	return b.String()
 }
 
+// applyMarks adds the markup styling
 func applyMarks(text string, marks []ADFMark) string {
 	result := text
 	for _, m := range marks {
@@ -137,26 +138,28 @@ func applyMarks(text string, marks []ADFMark) string {
 	return result
 }
 
+// stylePanel provides jira like panel styling
 func stylePanel(pType string, content string) string {
 	// Trim trailing newlines from content to avoid huge gaps
 	content = strings.TrimSpace(content)
 
 	switch pType {
 	case "info":
-		return style.StyleBlue("ℹ️ INFO:\n"+content) + "\n\n"
+		return style.Blue("ℹ️ INFO:\n"+content) + "\n\n"
 	case "warning":
-		return style.StyleYellow("⚠️ WARNING:\n"+content) + "\n\n"
+		return style.Yellow("⚠️ WARNING:\n"+content) + "\n\n"
 	case "error":
-		return style.StyleRed("🚫 ERROR:\n"+content) + "\n\n"
+		return style.Red("🚫 ERROR:\n"+content) + "\n\n"
 	case "success":
-		return style.StyleGreen("✅ SUCCESS:\n"+content) + "\n\n"
+		return style.Green("✅ SUCCESS:\n"+content) + "\n\n"
 	case "note":
-		return style.StyleGray("📝 NOTE:\n"+content) + "\n\n"
+		return style.Gray("📝 NOTE:\n"+content) + "\n\n"
 	default:
 		return content + "\n\n"
 	}
 }
 
+// parseTable generates markup table from ADF format
 func parseTable(node DescriptionNode) string {
 	if len(node.Content) == 0 {
 		return ""
@@ -226,6 +229,7 @@ func visualLength(s string) int {
 	return len(plain)
 }
 
+// MarkdownToADF converts written markup text to jira accepted ADF format
 func MarkdownToADF(input string) JiraDescription {
 	lines := strings.Split(input, "\n")
 	var rootContent []DescriptionNode
@@ -380,13 +384,13 @@ func parseInlineMention(input string) []DescriptionNode {
 		}
 
 		// Append the mention node
-		accountId := input[m[2]:m[3]]
+		accountID := input[m[2]:m[3]]
 		displayName := input[m[4]:m[5]]
 
 		nodes = append(nodes, DescriptionNode{
 			Type: "mention",
 			Attrs: map[string]any{
-				"id":          accountId,
+				"id":          accountID,
 				"text":        "@" + displayName,
 				"accessLevel": "", // Jira often expects this field, even if empty
 			},
