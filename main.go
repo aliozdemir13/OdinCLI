@@ -40,7 +40,7 @@ func RunApp(stdin io.Reader, stdout io.Writer, envPath string, configPath string
 	if err != nil {
 		_, _ = fmt.Fprintln(stdout, style.Red("✘ Error: config.json not found."))
 		_, _ = fmt.Fprintln(stdout, style.Dim("Please create a config.json file in the root directory."))
-		return err
+		return nil
 	}
 
 	var config models.Config
