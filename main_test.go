@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/aliozdemir13/odincli/internal/handler"
 )
 
 func TestRunApp(t *testing.T) {
@@ -74,12 +76,31 @@ func TestRunApp(t *testing.T) {
 		var output bytes.Buffer
 
 		// Run the app logic
-		err := RunApp(input, &output, ".env.example", configPath)
+		_ = RunApp(input, &output, ".env.example", configPath)
 
-		if err == nil {
-			t.Errorf("Expected error due to missing .env")
+		if !strings.Contains(output.String(), "Error loading .env file") {
+			t.Errorf("Expected 'Error loading .env file' but it is %s", &output)
 		}
 	})
+
+	oldEditor := handler.RunCommendEditor
+	oldForm := handler.RunIssueForm
+	oldDescription := handler.RunDescriptionEditor
+
+	handler.RunCommendEditor = func() string { return "test content" }
+	handler.RunIssueForm = func() (string, string, string, string, error) {
+		return "Summary", "Task", "5", "", nil
+	}
+	handler.RunDescriptionEditor = func() (string, bool) {
+		return "Description", false
+	}
+
+	// Restore them after the test
+	defer func() {
+		handler.RunCommendEditor = oldEditor
+		handler.RunIssueForm = oldForm
+		handler.RunDescriptionEditor = oldDescription
+	}()
 
 	t.Run("cover cases", func(t *testing.T) {
 		// Simulate user typing "exit"

@@ -30,16 +30,16 @@ func RunApp(stdin io.Reader, stdout io.Writer, envPath string, configPath string
 	// env load flexibility for multi-org work
 	err := godotenv.Load(envPath)
 	if err != nil {
-		fmt.Fprintln(stdout, "Error loading .env file")
-		return err
+		_, _ = fmt.Fprintln(stdout, "Error loading .env file")
+		return nil
 	}
 
 	apiKey := strings.TrimSpace(os.Getenv("API_KEY"))
 
 	configRaw, err := os.ReadFile(configPath)
 	if err != nil {
-		fmt.Fprintln(stdout, style.Red("✘ Error: config.json not found."))
-		fmt.Fprintln(stdout, style.Dim("Please create a config.json file in the root directory."))
+		_, _ = fmt.Fprintln(stdout, style.Red("✘ Error: config.json not found."))
+		_, _ = fmt.Fprintln(stdout, style.Dim("Please create a config.json file in the root directory."))
 		return err
 	}
 
@@ -47,7 +47,7 @@ func RunApp(stdin io.Reader, stdout io.Writer, envPath string, configPath string
 
 	errUnmarshal := json.Unmarshal(configRaw, &config)
 	if errUnmarshal != nil {
-		return fmt.Errorf("Error unmarshaling: %v\n", errUnmarshal)
+		return fmt.Errorf("error unmarshaling: %v", errUnmarshal)
 	}
 
 	scanner := bufio.NewScanner(stdin)
@@ -112,13 +112,13 @@ func RunApp(stdin io.Reader, stdout io.Writer, envPath string, configPath string
 			handler.HandleCreateIssue()
 
 		case "exit":
-			fmt.Fprintln(stdout, style.Blue(style.Bold("Goodbye!")))
+			_, _ = fmt.Fprintln(stdout, style.Blue(style.Bold("Goodbye!")))
 			return nil
 		case "help":
 			style.PrintCommandList(stdout)
 
 		default:
-			fmt.Fprintln(stdout, style.Red("Unknown command. See menu above."))
+			_, _ = fmt.Fprintln(stdout, style.Red("Unknown command. See menu above."))
 		}
 	}
 

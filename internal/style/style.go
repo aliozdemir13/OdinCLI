@@ -48,22 +48,22 @@ func PrintHeader(stdout io.Writer) {
 
 // PrintCommandList returns the command list for guidance
 func PrintCommandList(stdout io.Writer) {
-	fmt.Fprintln(stdout, Dim("\nUsage: pull ---{{ProjectKey}}"))
-	fmt.Fprintln(stdout, Dim("Usage: details ---{{IssueKey}}"))
-	fmt.Fprintln(stdout, Dim("Usage: details ---epic {{KEY}}"))
-	fmt.Fprintln(stdout, Dim("Usage: search ---\"{{phrase}}\""))
-	fmt.Fprintln(stdout, Dim("Usage: filter ---status {{Status}}"))
-	fmt.Fprintln(stdout, Dim("Usage: filter ---prio {{Priority}}"))
-	fmt.Fprintln(stdout, Dim("Usage: filter ---myIssues"))
-	fmt.Fprintln(stdout, Dim("Usage: filter ---currentSprint"))
-	fmt.Fprintln(stdout, Dim("Usage: filter ---backlog"))
-	fmt.Fprintln(stdout, Dim("Usage: filter ---epics"))
-	fmt.Fprintln(stdout, Dim("Usage: addComment ---{{IssueKey}}"))
-	fmt.Fprintln(stdout, Dim("Usage: status ---{{IssueKey}}"))
-	fmt.Fprintln(stdout, Dim("Usage: assign ---{{IssueKey}}"))
-	fmt.Fprintln(stdout, Dim("Usage: create"))
-	fmt.Fprintln(stdout, Dim("Usage: exit"))
-	fmt.Fprintln(stdout, Dim("Usage: help"))
+	_, _ = fmt.Fprintln(stdout, Dim("\nUsage: pull ---{{ProjectKey}}"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: details ---{{IssueKey}}"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: details ---epic {{KEY}}"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: search ---\"{{phrase}}\""))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: filter ---status {{Status}}"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: filter ---prio {{Priority}}"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: filter ---myIssues"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: filter ---currentSprint"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: filter ---backlog"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: filter ---epics"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: addComment ---{{IssueKey}}"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: status ---{{IssueKey}}"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: assign ---{{IssueKey}}"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: create"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: exit"))
+	_, _ = fmt.Fprintln(stdout, Dim("Usage: help"))
 }
 
 // Dim decorates text to dim it
