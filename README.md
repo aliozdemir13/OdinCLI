@@ -1,9 +1,9 @@
-# OdinCLI
-Productivity tool connecting enterprise tools through CLI. 
+# Odin - Jira CLI tool
+Productivity tool allowing you to use Jira through CLI. 
 Focus on your code, not your browser tabs!
 
-## Currently Supported Toolstack
-### Jira Cloud
+## Currently Supported Actions and Features
+### Intro
 Odin listens to your command and brings you the knowledge from Jira Cloud. 
 
 Security-focused design - none of the pulled information is stored in the device but only cached during the session, and once the session has ended - they will be cleared up. For app to work, **Authentication Token** must be created from Jira and a local .env file must be configured with it.
