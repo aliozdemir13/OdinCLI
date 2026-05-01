@@ -3,6 +3,7 @@ package style
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -32,7 +33,7 @@ const (
 )
 
 // PrintHeader returns the logo and the command list for guidance
-func PrintHeader() {
+func PrintHeader(stdout io.Writer) {
 	logo := `
   ██████╗  ██████╗  ██╗ ███╗   ██╗
  ██╔═══██╗ ██╔══██╗ ██║ ████╗  ██║
@@ -42,23 +43,27 @@ func PrintHeader() {
   ╚═════╝  ╚═════╝  ╚═╝ ╚═╝  ╚═══╝`
 	fmt.Println(ColorCyan + logo + ColorReset)
 
-	PrintCommandList()
+	PrintCommandList(stdout)
 }
 
 // PrintCommandList returns the command list for guidance
-func PrintCommandList() {
-	fmt.Println(Dim("\nUsage: pull ---{{ProjectKey}}"))
-	fmt.Println(Dim("Usage: details ---{{IssueKey}}"))
-	fmt.Println(Dim("Usage: search ---{{IssueKey}}"))
-	fmt.Println(Dim("Usage: filter ---status {{Status}}"))
-	fmt.Println(Dim("Usage: filter ---prio {{Priority}}"))
-	fmt.Println(Dim("Usage: filter ---myIssues"))
-	fmt.Println(Dim("Usage: filter ---currentSprint"))
-	fmt.Println(Dim("Usage: filter ---backlog"))
-	fmt.Println(Dim("Usage: filter ---epics"))
-	fmt.Println(Dim("Usage: addComment ---{{IssueKey}}"))
-	fmt.Println(Dim("Usage: exit"))
-	fmt.Println(Dim("Usage: help"))
+func PrintCommandList(stdout io.Writer) {
+	fmt.Fprintln(stdout, Dim("\nUsage: pull ---{{ProjectKey}}"))
+	fmt.Fprintln(stdout, Dim("Usage: details ---{{IssueKey}}"))
+	fmt.Fprintln(stdout, Dim("Usage: details ---epic {{KEY}}"))
+	fmt.Fprintln(stdout, Dim("Usage: search ---\"{{phrase}}\""))
+	fmt.Fprintln(stdout, Dim("Usage: filter ---status {{Status}}"))
+	fmt.Fprintln(stdout, Dim("Usage: filter ---prio {{Priority}}"))
+	fmt.Fprintln(stdout, Dim("Usage: filter ---myIssues"))
+	fmt.Fprintln(stdout, Dim("Usage: filter ---currentSprint"))
+	fmt.Fprintln(stdout, Dim("Usage: filter ---backlog"))
+	fmt.Fprintln(stdout, Dim("Usage: filter ---epics"))
+	fmt.Fprintln(stdout, Dim("Usage: addComment ---{{IssueKey}}"))
+	fmt.Fprintln(stdout, Dim("Usage: status ---{{IssueKey}}"))
+	fmt.Fprintln(stdout, Dim("Usage: assign ---{{IssueKey}}"))
+	fmt.Fprintln(stdout, Dim("Usage: create"))
+	fmt.Fprintln(stdout, Dim("Usage: exit"))
+	fmt.Fprintln(stdout, Dim("Usage: help"))
 }
 
 // Dim decorates text to dim it

@@ -15,6 +15,59 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
+// option preferred to be able to increase testability, it is known that this is not the best option but merely a patch before next refactor
+// TODO: refactor it and use Dependency Injection
+var (
+	RunIssueForm = func() (summary, issueType, effort, parent string, err error) {
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().Title("Summary").Value(&summary).Validate(func(str string) error {
+					if str == "" {
+						return fmt.Errorf("required")
+					}
+					return nil
+				}),
+				huh.NewSelect[string]().Title("Issue Type").
+					Options(huh.NewOptions("Task", "Bug", "Story", "Sub-task", "Epic")...).
+					Value(&issueType),
+			),
+			huh.NewGroup(
+				huh.NewInput().Title("Parent Key (Optional)").Value(&parent),
+				huh.NewInput().Title("Story Points (Optional)").Value(&effort),
+			),
+		)
+		err = form.Run()
+		return
+	}
+
+	RunDescriptionEditor = func() (content string, aborted bool) {
+		p := tea.NewProgram(ui.InitialModel())
+		m, _ := p.Run()
+		finalModel := m.(ui.EditorModel)
+		return finalModel.Content, finalModel.Aborted
+	}
+
+	RunCommendEditor = func() string {
+		p := tea.NewProgram(ui.InitialModel())
+		m, err := p.Run()
+		if err != nil {
+			fmt.Printf("Error running editor: %v", err)
+			return ""
+		}
+
+		finalModel := m.(ui.EditorModel)
+
+		if finalModel.Aborted || finalModel.Content == "" {
+			fmt.Println(style.Yellow("Comment cancelled."))
+			return ""
+		}
+
+		fmt.Println(style.Dim("Processing markup\n"))
+
+		return finalModel.Content
+	}
+)
+
 // HandlePull covers pull action and fetches issues from jira
 func HandlePull(parts []string, config models.Config, apiKey string) bool {
 	if len(parts) < 2 {
@@ -85,7 +138,7 @@ func HandleAddComment(parts []string) bool {
 		return false
 	}
 
-	c := handleMarkdownEditor()
+	c := RunCommendEditor()
 	if c == "" {
 		return false
 	}
@@ -319,60 +372,11 @@ func HandleSearch(parts []string) bool {
 	return true
 }
 
-func handleMarkdownEditor() string {
-	p := tea.NewProgram(ui.InitialModel())
-	m, err := p.Run()
-	if err != nil {
-		fmt.Printf("Error running editor: %v", err)
-		return ""
-	}
-
-	finalModel := m.(ui.EditorModel)
-
-	if finalModel.Aborted || finalModel.Content == "" {
-		fmt.Println(style.Yellow("Comment cancelled."))
-		return ""
-	}
-
-	fmt.Println(style.Dim("Processing markup\n"))
-
-	return finalModel.Content
-}
-
 // HandleCreateIssue covers the new issue creation using the markdown editor for issue contents
 func HandleCreateIssue() bool {
-	var (
-		summary   string
-		issueType string
-		effort    string
-		parent    string
-	)
 
-	// Create a multi-step form
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Summary").
-				Value(&summary).
-				Validate(func(str string) error {
-					if str == "" {
-						return fmt.Errorf("summary is required")
-					}
-					return nil
-				}),
-
-			huh.NewSelect[string]().
-				Title("Issue Type").
-				Options(huh.NewOptions("Task", "Bug", "Story", "Sub-task", "Epic")...).
-				Value(&issueType),
-		),
-		huh.NewGroup(
-			huh.NewInput().Title("Parent Key (Optional)").Value(&parent),
-			huh.NewInput().Title("Story Points (Optional)").Value(&effort),
-		),
-	)
-
-	err := form.Run()
+	// Create a multi-step form using function as variable approach
+	summary, issueType, effort, parent, err := RunIssueForm()
 	if err != nil {
 		fmt.Println("Cancelled.")
 		return false
@@ -380,11 +384,8 @@ func HandleCreateIssue() bool {
 
 	//Launch Bubble Tea Editor for the Description
 	fmt.Println(style.Indigo("Opening Editor for Description..."))
-	p := tea.NewProgram(ui.InitialModel())
-	m, _ := p.Run()
-	finalModel := m.(ui.EditorModel)
-
-	if finalModel.Aborted {
+	content, aborted := RunDescriptionEditor()
+	if aborted {
 		fmt.Println(style.Red("Creation cancelled."))
 		return false
 	}
@@ -394,7 +395,7 @@ func HandleCreateIssue() bool {
 	payload.Fields.Project.Key = internal.CurrentInstance.Name
 	payload.Fields.Summary = summary
 	payload.Fields.IssueType.Name = issueType
-	payload.Fields.Description = models.MarkdownToADF(finalModel.Content)
+	payload.Fields.Description = models.MarkdownToADF(content)
 
 	if parent != "" {
 		payload.Fields.Parent = &models.ProjectReference{Key: strings.ToUpper(parent)}

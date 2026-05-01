@@ -5,7 +5,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
+	"io"
 	"os"
 	"strings"
 
@@ -17,33 +17,43 @@ import (
 )
 
 func main() {
-	style.PrintHeader()
+	// Just call the runner and exit with a code if it fails
+	if err := RunApp(os.Stdin, os.Stdout, ".env", "config.json"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
 
-	err := godotenv.Load()
+func RunApp(stdin io.Reader, stdout io.Writer, envPath string, configPath string) error {
+	style.PrintHeader(stdout)
+
+	// env load flexibility for multi-org work
+	err := godotenv.Load(envPath)
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		fmt.Fprintln(stdout, "Error loading .env file")
+		return err
 	}
 
 	apiKey := strings.TrimSpace(os.Getenv("API_KEY"))
 
-	configRaw, err := os.ReadFile("config.json")
+	configRaw, err := os.ReadFile(configPath)
 	if err != nil {
-		fmt.Println(style.Red("✘ Error: config.json not found."))
-		fmt.Println(style.Dim("Please create a config.json file in the root directory."))
-		return
+		fmt.Fprintln(stdout, style.Red("✘ Error: config.json not found."))
+		fmt.Fprintln(stdout, style.Dim("Please create a config.json file in the root directory."))
+		return err
 	}
 
 	var config models.Config
 
 	errUnmarshal := json.Unmarshal(configRaw, &config)
 	if errUnmarshal != nil {
-		fmt.Printf("Error unmarshaling: %v\n", errUnmarshal)
-		return
+		return fmt.Errorf("Error unmarshaling: %v\n", errUnmarshal)
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(stdin)
 
 	for {
+		// deliberate choice to keep command and text on the same line
 		fmt.Print(style.Blue(style.Bold("\nodin waits for your command! > ")))
 		if !scanner.Scan() {
 			break
@@ -102,13 +112,15 @@ func main() {
 			handler.HandleCreateIssue()
 
 		case "exit":
-			fmt.Println(style.Blue(style.Bold("Goodbye!")))
-			return
+			fmt.Fprintln(stdout, style.Blue(style.Bold("Goodbye!")))
+			return nil
 		case "help":
-			style.PrintCommandList()
+			style.PrintCommandList(stdout)
 
 		default:
-			fmt.Println(style.Red("Unknown command. See menu above."))
+			fmt.Fprintln(stdout, style.Red("Unknown command. See menu above."))
 		}
 	}
+
+	return nil
 }

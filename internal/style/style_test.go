@@ -100,7 +100,7 @@ func captureOutput(f func()) string {
 // TestPrintCommandList checks if the command list prints expected usage strings
 func TestPrintCommandList(t *testing.T) {
 	output := captureOutput(func() {
-		PrintCommandList()
+		PrintCommandList(os.Stdout)
 	})
 
 	expectedCommands := []string{
@@ -120,7 +120,7 @@ func TestPrintCommandList(t *testing.T) {
 // TestPrintHeader checks if the command list prints expected usage strings
 func TestPrintHeader(t *testing.T) {
 	output := captureOutput(func() {
-		PrintHeader()
+		PrintHeader(os.Stdout)
 	})
 
 	expectedCommands := []string{

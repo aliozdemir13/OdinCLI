@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -576,6 +577,190 @@ func TestHandleStatus(t *testing.T) {
 
 		if !strings.Contains(output, "status ---{{KEY}}") {
 			t.Error("Expected 'status ---{{KEY}}' in output")
+		}
+	})
+}
+
+func TestHandleAssign(t *testing.T) {
+	server := mockServerSetup()
+	defer server.Close()
+
+	config := models.Config{Projects: map[string]models.ProjectConfig{"TEST": {URL: server.URL}}}
+	HandlePull([]string{"pull", "TEST"}, config, "key")
+
+	t.Run("Assign to user", func(t *testing.T) {
+		// Mock user typing "1" to select the first user in the search results
+		restore := mockStdin("1\n")
+		defer restore()
+
+		success := HandleAssign([]string{"assign", "PROJ-1", "ali"})
+		if !success {
+			t.Error("Expected HandleAssign to succeed")
+		}
+	})
+
+	t.Run("Handle assign user negative", func(t *testing.T) {
+		output := captureStdout(func() {
+			success := HandleAssign([]string{"assign"})
+			if success {
+				t.Error("Expected handle add comment to return false for missing parameter")
+			}
+		})
+
+		if !strings.Contains(output, "assign ---{{KEY}}") {
+			t.Error("Expected 'assign ---{{KEY}}' in output")
+		}
+	})
+}
+
+func TestHandleCreateIssue(t *testing.T) {
+	server := mockServerSetup()
+	defer server.Close()
+
+	// stores the original version of the function like a bookmark
+	oldForm := RunIssueForm
+	oldEditor := RunDescriptionEditor
+
+	// reset changes at the end of the test because
+	// in Go is that tests in the same package share the same memory.
+	defer func() {
+		RunIssueForm = oldForm
+		RunDescriptionEditor = oldEditor
+	}()
+
+	// assign the version of function that test should execute
+	RunIssueForm = func() (string, string, string, string, error) {
+		// Simulate filling out the form
+		return "Test Summary", "Task", "5", "", nil
+	}
+
+	// assign the version of function that test should execute
+	RunDescriptionEditor = func() (string, bool) {
+		// Simulate typing in the editor
+		return "Test Description", false
+	}
+
+	// Setup internal state
+	config := models.Config{
+		Projects: map[string]models.ProjectConfig{
+			"TEST": {URL: server.URL, Email: "test@test.com"},
+		},
+	}
+	HandlePull([]string{"pull", "TEST"}, config, "mock-api-key")
+
+	t.Run("Handle add create issue", func(t *testing.T) {
+		// Act
+		success := HandleCreateIssue()
+
+		// Assert
+		if !success {
+			t.Error("Expected HandleCreateIssue to succeed")
+		}
+	})
+
+	RunIssueForm = func() (string, string, string, string, error) {
+		// Simulate filling out the form
+		return "Test Summary", "Task", "5", "", fmt.Errorf("test error")
+	}
+
+	t.Run("Handle issue create negative for form abortion", func(t *testing.T) {
+		output := captureStdout(func() {
+			success := HandleCreateIssue()
+			if success {
+				t.Error("Expected HandleCreateIssue to return false")
+			}
+		})
+
+		if !strings.Contains(output, "Cancelled.") {
+			t.Error("Expected 'Cancelled.' in output")
+		}
+	})
+
+	// reset this to the original test form for passing the validation
+	RunIssueForm = func() (string, string, string, string, error) {
+		// Simulate filling out the form
+		return "Test Summary", "Task", "5", "", nil
+	}
+
+	RunDescriptionEditor = func() (string, bool) {
+		// Simulate typing in the editor
+		return "", true
+	}
+
+	t.Run("Handle issue create negative for editor closure", func(t *testing.T) {
+		output := captureStdout(func() {
+			success := HandleCreateIssue()
+			if success {
+				t.Error("Expected HandleCreateIssue to return false")
+			}
+		})
+
+		if !strings.Contains(output, "Creation cancelled.") {
+			t.Errorf("Expected 'Creation cancelled.' in output but it is %s", output)
+		}
+	})
+}
+
+func TestHandleAddComment(t *testing.T) {
+	server := mockServerSetup()
+	defer server.Close()
+
+	// stores the original version of the function like a bookmark
+	oldEditor := RunCommendEditor
+
+	// reset changes at the end of the test because
+	// in Go is that tests in the same package share the same memory.
+	defer func() {
+		RunCommendEditor = oldEditor
+	}()
+
+	// assign the version of function that test should execute
+	RunCommendEditor = func() string {
+		// Simulate typing in the editor
+		return "Test comment"
+	}
+
+	// Setup internal state
+	config := models.Config{
+		Projects: map[string]models.ProjectConfig{
+			"TEST": {URL: server.URL, Email: "test@test.com"},
+		},
+	}
+	HandlePull([]string{"pull", "TEST"}, config, "mock-api-key")
+
+	t.Run("Handle add comment", func(t *testing.T) {
+		// Act
+		success := HandleAddComment([]string{"addComment", "Test comment"})
+
+		// Assert
+		if !success {
+			t.Error("Expected HandleCreateIssue to succeed")
+		}
+	})
+
+	t.Run("Handle add negative", func(t *testing.T) {
+		output := captureStdout(func() {
+			success := HandleAddComment([]string{"addComment"})
+			if success {
+				t.Error("Expected handle add comment to return false for missing parameter")
+			}
+		})
+
+		if !strings.Contains(output, "addComment {{Key}}") {
+			t.Error("Expected 'addComment {{Key}}' in output")
+		}
+	})
+
+	// assign the version of function that test should execute
+	RunCommendEditor = func() string {
+		// Simulate typing in the editor
+		return ""
+	}
+
+	t.Run("Handle add negative for empty text", func(t *testing.T) {
+		success := HandleAddComment([]string{"addComment", "Test comment"})
+		if success {
+			t.Error("Expected handle add comment to return false for missing parameter")
 		}
 	})
 }
