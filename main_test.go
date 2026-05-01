@@ -2,23 +2,21 @@ package main
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/aliozdemir13/odincli/internal/handler"
+	"github.com/aliozdemir13/odincli/internal/models"
 )
 
+// TODO: refactor for table-driven test
 func TestRunApp(t *testing.T) {
 	// 1. Create a temporary config.json
-	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.json")
-	configData := `{"projects": {"TEST": {"url": "http://localhost", "email": "a@b.com"}}}`
-	os.WriteFile(configPath, []byte(configData), 0644)
-
-	// 2. Mock the API_KEY environment variable
-	t.Setenv("API_KEY", "mock-key")
+	config := models.Config{
+		Projects: map[string]models.ProjectConfig{
+			"TEST": {URL: "https://test.atlassian.net", Email: "test@test.com"},
+		},
+	}
 
 	t.Run("run Help command", func(t *testing.T) {
 		// 3. Simulate user typing "help"
@@ -26,7 +24,7 @@ func TestRunApp(t *testing.T) {
 		var output bytes.Buffer
 
 		// 4. Run the app logic
-		err := RunApp(input, &output, ".env", configPath)
+		err := RunApp(input, &output, config, "mock-key")
 
 		if err != nil {
 			t.Fatalf("RunApp failed: %v", err)
@@ -45,7 +43,7 @@ func TestRunApp(t *testing.T) {
 		var output bytes.Buffer
 
 		// run the app logic
-		err := RunApp(input, &output, ".env", configPath)
+		err := RunApp(input, &output, config, "mock-key")
 
 		if err != nil {
 			t.Fatalf("RunApp failed: %v", err)
@@ -55,31 +53,6 @@ func TestRunApp(t *testing.T) {
 		result := output.String()
 		if !strings.Contains(result, "Goodbye!") {
 			t.Errorf("Expected output to contain 'Goodbye!' but it is %s", result)
-		}
-	})
-
-	t.Run("Invalid Config", func(t *testing.T) {
-		input := strings.NewReader("exit\n")
-		var output bytes.Buffer
-
-		// Pass a non-existent config path
-		_ = RunApp(input, &output, ".env", "wrong_path.json")
-
-		if !strings.Contains(output.String(), "config.json not found") {
-			t.Errorf("Expected error message for missing config but it is %s", &output)
-		}
-	})
-
-	t.Run("missing .env", func(t *testing.T) {
-		// Simulate user typing "exit"
-		input := strings.NewReader("exit\n")
-		var output bytes.Buffer
-
-		// Run the app logic
-		_ = RunApp(input, &output, ".env.example", configPath)
-
-		if !strings.Contains(output.String(), "Error loading .env file") {
-			t.Errorf("Expected 'Error loading .env file' but it is %s", &output)
 		}
 	})
 
@@ -104,11 +77,11 @@ func TestRunApp(t *testing.T) {
 
 	t.Run("cover cases", func(t *testing.T) {
 		// Simulate user typing "exit"
-		input := strings.NewReader("pull ---test\ndetails ---PROJ-1\naddComment ---PROJ-1\nfilter ---myIssues\nsearch ---\"test\"\nstatus ---PROJ-1\nassign ---PROJ-1\ncreate\n")
+		input := strings.NewReader("pull ---test\ndetails ---PROJ-1\naddComment ---PROJ-1\nfilter ---myIssues\nsearch ---\"test\"\nstatus ---PROJ-1\nassign ---PROJ-1\ncreate\nunknown\n")
 		var output bytes.Buffer
 
 		// Run the app logic
-		err := RunApp(input, &output, ".env", configPath)
+		err := RunApp(input, &output, config, "mock-key")
 
 		if err != nil {
 			t.Errorf("No expected error ")

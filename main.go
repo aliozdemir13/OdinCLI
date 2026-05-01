@@ -17,38 +17,36 @@ import (
 )
 
 func main() {
-	// Just call the runner and exit with a code if it fails
-	if err := RunApp(os.Stdin, os.Stdout, ".env", "config.json"); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-func RunApp(stdin io.Reader, stdout io.Writer, envPath string, configPath string) error {
-	style.PrintHeader(stdout)
-
 	// env load flexibility for multi-org work
-	err := godotenv.Load(envPath)
+	err := godotenv.Load()
 	if err != nil {
-		_, _ = fmt.Fprintln(stdout, "Error loading .env file")
-		return nil
+		fmt.Printf("Error loading .env file")
 	}
 
 	apiKey := strings.TrimSpace(os.Getenv("API_KEY"))
 
-	configRaw, err := os.ReadFile(configPath)
+	configRaw, err := os.ReadFile("config.json")
 	if err != nil {
-		_, _ = fmt.Fprintln(stdout, style.Red("✘ Error: config.json not found."))
-		_, _ = fmt.Fprintln(stdout, style.Dim("Please create a config.json file in the root directory."))
-		return nil
+		fmt.Println(style.Red("✘ Error: config.json not found."))
+		fmt.Println(style.Dim("Please create a config.json file in the root directory."))
 	}
 
 	var config models.Config
 
 	errUnmarshal := json.Unmarshal(configRaw, &config)
 	if errUnmarshal != nil {
-		return fmt.Errorf("error unmarshaling: %v", errUnmarshal)
+		fmt.Printf("error unmarshaling: %v", errUnmarshal)
 	}
+
+	// Just call the runner and exit with a code if it fails
+	if err := RunApp(os.Stdin, os.Stdout, config, apiKey); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func RunApp(stdin io.Reader, stdout io.Writer, config models.Config, apiKey string) error {
+	style.PrintHeader(stdout)
 
 	scanner := bufio.NewScanner(stdin)
 
